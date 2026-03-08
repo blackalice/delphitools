@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Info, Star } from "lucide-react";
 
-import { toolCategories, featuredTools } from "@/lib/tools";
+import { toolCategories } from "@/lib/tools";
+import { useFavorites } from "@/components/favorites-provider";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +29,7 @@ import {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { favouriteTools } = useFavorites();
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -76,29 +78,37 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-1.5">
             <Star className="size-3 text-amber-500 fill-amber-500" />
-            Greatest Hits
+            Favourites
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {featuredTools.map((tool) => {
-                const Icon = tool.icon;
-                const isActive = pathname === tool.href;
-                return (
-                  <SidebarMenuItem key={tool.id}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={tool.name}
-                      className="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
-                    >
-                      <Link href={tool.href} prefetch={false}>
-                        <Icon className="size-4" />
-                        <span>{tool.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {favouriteTools.length > 0 ? (
+                favouriteTools.map((tool) => {
+                  const Icon = tool.icon;
+                  const isActive = pathname === tool.href;
+                  return (
+                    <SidebarMenuItem key={tool.id}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={tool.name}
+                        className="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                      >
+                        <Link href={tool.href} prefetch={false}>
+                          <Icon className="size-4" />
+                          <span>{tool.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })
+              ) : (
+                <SidebarMenuItem>
+                  <div className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    Star tools on the home page to add them here.
+                  </div>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

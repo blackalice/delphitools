@@ -1,0 +1,107 @@
+"use client";
+
+import * as React from "react";
+import { Check, ChevronDown, Moon, Palette, Sun } from "lucide-react";
+
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/components/theme-provider";
+import {
+  DEFAULT_THEME_PALETTE,
+  THEME_PALETTES,
+  type ThemePalette,
+} from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+export function ThemeControls() {
+  const [paletteMenuOpen, setPaletteMenuOpen] = React.useState(false);
+  const { mounted, mode, palette, setMode, setPalette } = useTheme();
+  const isDark = mode === "dark";
+  const activePalette = THEME_PALETTES.find((option) => option.value === palette);
+  const fallbackPalette =
+    THEME_PALETTES.find((option) => option.value === DEFAULT_THEME_PALETTE) ??
+    THEME_PALETTES[0];
+
+  return (
+    <div className="ml-auto flex w-full items-center justify-end gap-2 max-sm:flex-wrap sm:w-auto">
+      <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-2.5 py-1.5 shadow-sm backdrop-blur">
+        <Palette className="size-3.5 text-muted-foreground" />
+        <Popover onOpenChange={setPaletteMenuOpen} open={paletteMenuOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              aria-label="Select colour scheme"
+              className="h-8 min-w-28 justify-between border-none bg-transparent px-1.5 shadow-none hover:bg-transparent focus-visible:ring-0"
+              size="sm"
+              variant="ghost"
+            >
+              <span>{mounted ? activePalette?.label : fallbackPalette.label}</span>
+              <ChevronDown className="size-3.5 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-40 p-1"
+            collisionPadding={16}
+            side="bottom"
+            sideOffset={8}
+          >
+            <div className="grid gap-1">
+              {THEME_PALETTES.map((option) => {
+                const isActive = option.value === palette;
+
+                return (
+                  <button
+                    key={option.value}
+                    className={cn(
+                      "flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
+                      isActive && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={() => {
+                      setPalette(option.value as ThemePalette);
+                      setPaletteMenuOpen(false);
+                    }}
+                    type="button"
+                  >
+                    <span>{option.label}</span>
+                    <Check
+                      className={cn(
+                        "size-3.5 transition-opacity",
+                        isActive ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-1.5 shadow-sm backdrop-blur">
+        <Sun
+          className={cn(
+            "size-3.5 transition-colors",
+            isDark ? "text-muted-foreground" : "text-primary"
+          )}
+        />
+        <Switch
+          aria-label="Toggle dark mode"
+          checked={mounted ? isDark : false}
+          disabled={!mounted}
+          onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
+        />
+        <Moon
+          className={cn(
+            "size-3.5 transition-colors",
+            isDark ? "text-primary" : "text-muted-foreground"
+          )}
+        />
+      </div>
+    </div>
+  );
+}
