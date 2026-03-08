@@ -26,6 +26,7 @@ export function ThemeControls() {
   const fallbackPalette =
     THEME_PALETTES.find((option) => option.value === DEFAULT_THEME_PALETTE) ??
     THEME_PALETTES[0];
+  const displayPalette = activePalette ?? fallbackPalette;
 
   return (
     <div className="ml-auto flex w-full items-center justify-end gap-2 max-sm:flex-wrap sm:w-auto">
@@ -44,10 +45,10 @@ export function ThemeControls() {
                   aria-hidden="true"
                   className="size-2.5 rounded-full border border-black/10 shadow-sm"
                   style={{
-                    backgroundColor: (mounted ? activePalette : fallbackPalette).swatch,
+                    backgroundColor: (mounted ? displayPalette : fallbackPalette).swatch,
                   }}
                 />
-                <span>{mounted ? activePalette?.label : fallbackPalette.label}</span>
+                <span>{mounted ? displayPalette.label : fallbackPalette.label}</span>
               </span>
               <ChevronDown className="size-3.5 opacity-60" />
             </Button>

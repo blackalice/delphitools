@@ -25,6 +25,7 @@ const toolComponents: Record<string, React.ComponentType> = {
   "typo-calc": dynamic(() => import("@/components/tools/typo-calc").then(mod => mod.TypoCalcTool)),
   "glyph-browser": dynamic(() => import("@/components/tools/glyph-browser").then(mod => mod.GlyphBrowserTool)),
   "font-explorer": dynamic(() => import("@/components/tools/font-explorer").then(mod => mod.FontExplorerTool)),
+  "font-converter": dynamic(() => import("@/components/tools/font-converter").then(mod => mod.FontConverterTool)),
   "colour-converter": dynamic(() => import("@/components/tools/colour-converter").then(mod => mod.ColourConverterTool)),
   "tailwind-shades": dynamic(() => import("@/components/tools/tailwind-shades").then(mod => mod.TailwindShadesTool)),
   "harmony-genny": dynamic(() => import("@/components/tools/harmony-genny").then(mod => mod.HarmonyGennyTool)),

@@ -16,6 +16,24 @@ bun run dev
 
 `npm install` is intentionally blocked so the lockfile and dependency tree stay Bun-managed.
 
+### Dev server note
+
+If `bun dev` starts resolving packages like `tailwindcss` from the parent folder instead of this repo, do not "fix" it by:
+
+- changing `@import "tailwindcss"` / `@import "tw-animate-css"` to filesystem paths
+- adding custom Next/Bun root-launch wrappers
+- changing the app to use server-side fallbacks for browser-only tools
+
+Those changes caused follow-on breakage here.
+
+First stop the dev server, then clear the dev cache and retry:
+
+```powershell
+Remove-Item .\.next\dev -Recurse -Force
+```
+
+The Tailwind imports in [`app/globals.css`](./app/globals.css) should stay as bare package imports.
+
 ## Included tools
 
 ### img & assets

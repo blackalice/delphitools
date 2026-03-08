@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import {
   matchesToolSearch,
@@ -28,18 +28,26 @@ export function ToolSearchProvider({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const urlSearchQuery = searchParams.get("q") ?? "";
-  const [searchQuery, setSearchQueryState] = React.useState(urlSearchQuery);
+  const [searchQuery, setSearchQueryState] = React.useState("");
   const searchQueryRef = React.useRef(searchQuery);
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
 
+  const readUrlSearchQuery = React.useCallback(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    return new URLSearchParams(window.location.search).get("q") ?? "";
+  }, []);
+
   React.useEffect(() => {
+    const urlSearchQuery = readUrlSearchQuery();
+
     if (urlSearchQuery !== searchQueryRef.current) {
       searchQueryRef.current = urlSearchQuery;
       setSearchQueryState(urlSearchQuery);
     }
-  }, [pathname, router, searchParams, searchQuery, urlSearchQuery]);
+  }, [pathname, readUrlSearchQuery, router]);
 
   const setSearchQuery = React.useCallback<
     React.Dispatch<React.SetStateAction<string>>
@@ -50,7 +58,9 @@ export function ToolSearchProvider({
     searchQueryRef.current = nextValue;
     setSearchQueryState(nextValue);
 
-    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    const nextSearchParams = new URLSearchParams(
+      typeof window === "undefined" ? "" : window.location.search
+    );
 
     if (nextValue.trim()) {
       nextSearchParams.set("q", nextValue);
@@ -65,7 +75,7 @@ export function ToolSearchProvider({
     React.startTransition(() => {
       router.replace(nextUrl, { scroll: false });
     });
-  }, [pathname, router, searchParams]);
+  }, [pathname, router]);
 
   const filteredCategories = React.useMemo(
     () => searchToolCategories(deferredSearchQuery),

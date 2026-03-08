@@ -280,6 +280,14 @@ export const toolCategories: ToolCategory[] = [
         icon: FileType,
         href: "/tools/font-explorer",
       },
+      {
+        id: "font-converter",
+        name: "Font Converter",
+        description: "Convert WOFF and WOFF2 webfonts back to TTF or OTF locally",
+        icon: FileType,
+        href: "/tools/font-converter",
+        new: true,
+      },
     ],
   },
   {
