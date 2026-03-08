@@ -16,6 +16,24 @@ bun run dev
 
 `npm install` is intentionally blocked so the lockfile and dependency tree stay Bun-managed.
 
+## Cloudflare Pages
+
+This repo is configured for static export hosting on Cloudflare Pages.
+
+```bash
+bun install
+bun run pages:build
+```
+
+Deploy the generated `out/` directory to Cloudflare Pages.
+
+Notes:
+
+- `next.config.ts` uses `output: "export"` so `next build` emits a static site.
+- `public/_redirects` contains Cloudflare Pages redirects.
+- Set the Pages build command to `bun run pages:build`.
+- Set the Pages output directory to `out`.
+
 ### Dev server note
 
 If `bun dev` starts resolving packages like `tailwindcss` from the parent folder instead of this repo, do not "fix" it by:

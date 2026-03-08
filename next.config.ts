@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "export",
   images: {
     unoptimized: true,
   },
@@ -25,15 +26,6 @@ const nextConfig: NextConfig = {
     }
 
     return config;
-  },
-  async redirects() {
-    return [
-      {
-        source: "/tools/gradient-generator",
-        destination: "/tools/gradient-genny",
-        permanent: true, // 308 redirect
-      },
-    ];
   },
 };
 
