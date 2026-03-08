@@ -5,6 +5,17 @@ No logins, no registration, no data collection.
 I can't believe I have to say that. 
 Long live the handmade web.
 
+## Development
+
+This project uses Bun.
+
+```bash
+bun install
+bun run dev
+```
+
+`npm install` is intentionally blocked so the lockfile and dependency tree stay Bun-managed.
+
 ## Included tools
 
 ### img & assets

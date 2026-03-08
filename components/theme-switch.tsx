@@ -29,7 +29,7 @@ export function ThemeControls() {
 
   return (
     <div className="ml-auto flex w-full items-center justify-end gap-2 max-sm:flex-wrap sm:w-auto">
-      <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-2.5 py-1.5 shadow-sm backdrop-blur">
+      <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-card/80 px-2.5 shadow-sm backdrop-blur">
         <Palette className="size-3.5 text-muted-foreground" />
         <Popover onOpenChange={setPaletteMenuOpen} open={paletteMenuOpen}>
           <PopoverTrigger asChild>
@@ -39,7 +39,16 @@ export function ThemeControls() {
               size="sm"
               variant="ghost"
             >
-              <span>{mounted ? activePalette?.label : fallbackPalette.label}</span>
+              <span className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="size-2.5 rounded-full border border-black/10 shadow-sm"
+                  style={{
+                    backgroundColor: (mounted ? activePalette : fallbackPalette).swatch,
+                  }}
+                />
+                <span>{mounted ? activePalette?.label : fallbackPalette.label}</span>
+              </span>
               <ChevronDown className="size-3.5 opacity-60" />
             </Button>
           </PopoverTrigger>
@@ -67,7 +76,14 @@ export function ThemeControls() {
                     }}
                     type="button"
                   >
-                    <span>{option.label}</span>
+                    <span className="flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="size-2.5 rounded-full border border-black/10 shadow-sm"
+                        style={{ backgroundColor: option.swatch }}
+                      />
+                      <span>{option.label}</span>
+                    </span>
                     <Check
                       className={cn(
                         "size-3.5 transition-opacity",
@@ -82,7 +98,7 @@ export function ThemeControls() {
         </Popover>
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-1.5 shadow-sm backdrop-blur">
+      <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 shadow-sm backdrop-blur">
         <Sun
           className={cn(
             "size-3.5 transition-colors",

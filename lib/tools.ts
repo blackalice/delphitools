@@ -418,6 +418,31 @@ export const toolCategories: ToolCategory[] = [
 
 export const allTools = toolCategories.flatMap((category) => category.tools);
 
+export function matchesToolSearch(
+  tool: Pick<Tool, "name" | "description">,
+  query: string
+) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return (
+    tool.name.toLowerCase().includes(normalizedQuery) ||
+    tool.description.toLowerCase().includes(normalizedQuery)
+  );
+}
+
+export function searchToolCategories(query: string): ToolCategory[] {
+  return toolCategories
+    .map((category) => ({
+      ...category,
+      tools: category.tools.filter((tool) => matchesToolSearch(tool, query)),
+    }))
+    .filter((category) => category.tools.length > 0);
+}
+
 // Featured tools for "Delphi's Greatest Hits" section
 export const featuredToolIds = ["qr-genny", "palette-genny", "background-remover"];
 export const featuredTools = featuredToolIds

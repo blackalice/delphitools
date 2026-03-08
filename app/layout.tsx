@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { FavoritesProvider } from "@/components/favorites-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToolSearchProvider } from "@/components/tool-search-provider";
 import { THEME_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -32,13 +33,15 @@ export default function RootLayout({
       <body className="font-mono antialiased">
         <ThemeProvider>
           <FavoritesProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>
-                <AppHeader />
-                <main className="flex-1 overflow-auto">{children}</main>
-              </SidebarInset>
-            </SidebarProvider>
+            <ToolSearchProvider>
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                  <AppHeader />
+                  <main className="flex-1 overflow-auto">{children}</main>
+                </SidebarInset>
+              </SidebarProvider>
+            </ToolSearchProvider>
           </FavoritesProvider>
         </ThemeProvider>
       </body>

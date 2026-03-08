@@ -2,13 +2,13 @@ export const THEME_MODE_STORAGE_KEY = "delphitools-theme";
 export const THEME_PALETTE_STORAGE_KEY = "delphitools-palette";
 
 export const THEME_PALETTES = [
-  { value: "meadow", label: "Meadow" },
-  { value: "ocean", label: "Ocean" },
-  { value: "ember", label: "Ember" },
-  { value: "violet", label: "Violet" },
-  { value: "rose", label: "Rose" },
-  { value: "slate", label: "Slate" },
-  { value: "sunset", label: "Sunset" },
+  { value: "meadow", label: "Meadow", swatch: "oklch(0.45 0.12 145)" },
+  { value: "ocean", label: "Ocean", swatch: "oklch(0.53 0.14 240)" },
+  { value: "ember", label: "Ember", swatch: "oklch(0.62 0.2 38)" },
+  { value: "violet", label: "Violet", swatch: "oklch(0.56 0.18 305)" },
+  { value: "rose", label: "Rose", swatch: "oklch(0.61 0.18 14)" },
+  { value: "slate", label: "Slate", swatch: "oklch(0.44 0.03 255)" },
+  { value: "sunset", label: "Sunset", swatch: "oklch(0.63 0.18 335)" },
 ] as const;
 
 export type ThemeMode = "light" | "dark";

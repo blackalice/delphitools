@@ -378,7 +378,7 @@ export function GifOptimiserTool() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-6">
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border bg-card p-4">

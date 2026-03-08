@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Info, Search, Star, X } from "lucide-react";
 
-import { toolCategories } from "@/lib/tools";
 import { useFavorites } from "@/components/favorites-provider";
+import { useToolSearch } from "@/components/tool-search-provider";
 import {
   Sidebar,
   SidebarContent,
@@ -30,45 +30,22 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-function matchesToolSearch(tool: { name: string; description: string }, query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  return (
-    tool.name.toLowerCase().includes(normalizedQuery) ||
-    tool.description.toLowerCase().includes(normalizedQuery)
-  );
-}
-
 export function AppSidebar() {
   const pathname = usePathname();
   const { favouriteTools } = useFavorites();
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+  const {
+    searchQuery,
+    setSearchQuery,
+    deferredSearchQuery,
+    hasActiveSearch,
+    filterTools,
+    filteredCategories,
+  } = useToolSearch();
 
   const filteredFavouriteTools = React.useMemo(
-    () =>
-      favouriteTools.filter((tool) => matchesToolSearch(tool, deferredSearchQuery)),
-    [deferredSearchQuery, favouriteTools]
+    () => filterTools(favouriteTools),
+    [favouriteTools, filterTools]
   );
-
-  const filteredCategories = React.useMemo(
-    () =>
-      toolCategories
-        .map((category) => ({
-          ...category,
-          tools: category.tools.filter((tool) =>
-            matchesToolSearch(tool, deferredSearchQuery)
-          ),
-        }))
-        .filter((category) => category.tools.length > 0),
-    [deferredSearchQuery]
-  );
-
-  const hasActiveSearch = deferredSearchQuery.trim().length > 0;
   const hasToolResults =
     filteredFavouriteTools.length > 0 ||
     filteredCategories.some((category) => category.tools.length > 0);
@@ -88,9 +65,9 @@ export function AppSidebar() {
                   <img src="/delphi-lowlod.png" width={64} height={64} alt="delphitools logo" className="rounded-lg border-2 border-green-800" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">delphitools</span>
+                  <span className="font-semibold">opentools</span>
                   <span className="text-xs text-muted-foreground">
-                    handmade tools
+                    useful things
                   </span>
                 </div>
               </Link>

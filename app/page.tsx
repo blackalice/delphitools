@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 
-import { toolCategories, type Tool } from "@/lib/tools";
+import { type Tool } from "@/lib/tools";
 import {
   Card,
   CardDescription,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useFavorites } from "@/components/favorites-provider";
+import { useToolSearch } from "@/components/tool-search-provider";
 
 function ToolCard({
   tool,
@@ -106,9 +107,29 @@ function ToolCard({
 export default function Home() {
   const { mounted, favouriteIds, favouriteTools, toggleFavourite } =
     useFavorites();
+  const {
+    deferredSearchQuery,
+    hasActiveSearch,
+    filterTools,
+    filteredCategories,
+  } = useToolSearch();
+  const filteredFavouriteTools = filterTools(favouriteTools);
+  const hasCategoryResults = filteredCategories.length > 0;
+  const hasFavouriteResults = filteredFavouriteTools.length > 0;
 
   return (
     <div className="p-6 md:p-8 lg:p-10">
+      <section className="mb-10">
+        <div className="max-w-2xl space-y-1">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Tool Library</h1>
+            <p className="text-sm text-muted-foreground">
+              Use the sidebar search to filter both the sidebar and this page.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="mb-12">
         <div className="mb-4 flex items-center gap-2">
           <Star className="size-5 fill-amber-500 text-amber-500" />
@@ -117,9 +138,9 @@ export default function Home() {
           </h2>
         </div>
 
-        {mounted && favouriteTools.length > 0 ? (
+        {mounted && favouriteTools.length > 0 && (!hasActiveSearch || hasFavouriteResults) ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {favouriteTools.map((tool) => (
+            {filteredFavouriteTools.map((tool) => (
               <ToolCard
                 key={tool.id}
                 isFavourite
@@ -129,6 +150,15 @@ export default function Home() {
               />
             ))}
           </div>
+        ) : hasActiveSearch ? (
+          <Card className="border-dashed bg-muted/30">
+            <CardHeader>
+              <CardTitle className="text-base">No favourite matches</CardTitle>
+              <CardDescription>
+                No favourited tools match &quot;{deferredSearchQuery.trim()}&quot;.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         ) : (
           <Card className="border-dashed bg-muted/30">
             <CardHeader>
@@ -142,7 +172,7 @@ export default function Home() {
       </section>
 
       <div className="space-y-10">
-        {toolCategories.map((category) => (
+        {filteredCategories.map((category) => (
           <section key={category.id}>
             <h2 className="mb-4 text-lg font-semibold text-foreground/80">
               {category.name}
@@ -159,6 +189,17 @@ export default function Home() {
             </div>
           </section>
         ))}
+
+        {hasActiveSearch && !hasCategoryResults && (
+          <Card className="border-dashed bg-muted/30">
+            <CardHeader>
+              <CardTitle className="text-base">No tools found</CardTitle>
+              <CardDescription>
+                No tools match &quot;{deferredSearchQuery.trim()}&quot;.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
       </div>
 
       <div className="mt-16 border-t pt-8">
