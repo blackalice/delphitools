@@ -68,8 +68,8 @@ export function AppHeader() {
         </div>
       ) : (
         <div className="min-w-0 flex items-center gap-2">
-          <img src="/delphi.png" width={40} height={40} alt="delphitools logo" className="size-5 text-muted-foreground" />
-          <h1 className="text-lg font-semibold">delphitools</h1>
+          <img src="/pickles.jpeg" width={40} height={40} alt="pickletools logo" className="size-5 text-muted-foreground" />
+          <h1 className="text-lg font-semibold">pickletools</h1>
         </div>
       )}
 

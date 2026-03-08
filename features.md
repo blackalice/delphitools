@@ -1,4 +1,4 @@
-# delphitools Features
+# pickletools Features
 
 This document describes the current tool set shipped by the app, based on the tool registry in `lib/tools.ts` and the routed tool map in `app/tools/[toolId]/page.tsx`.
 
@@ -64,7 +64,7 @@ This document describes the current tool set shipped by the app, based on the to
 
 ### Other Tools
 
-- `/tools/markdown-writer` - Text Scratchpad: edit and manipulate text.
+- `/tools/markdown-writer` - Markdown Writer: compose Markdown with a live preview. `New`
 - `/tools/tailwind-cheatsheet` - Tailwind Cheat Sheet: quick reference for Tailwind classes.
 - `/tools/qr-genny` - QR Generator: generate styled QR codes with custom colours, shapes, and logos.
 - `/tools/code-genny` - Barcode Generator: generate Data Matrix, Aztec, PDF417, Code 128, EAN-13, and more.

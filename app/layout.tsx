@@ -10,13 +10,13 @@ import { ToolSearchProvider } from "@/components/tool-search-provider";
 import { THEME_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
-  title: "delphitools",
+  title: "pickletools",
   description:
     "A collection of small, low stakes and low effort tools. No logins, no registration, no data collection.",
   icons: {
-    icon: "/delphi-lowlod.png",
-    shortcut: "/delphi-lowlod.png",
-    apple: "/delphi-lowlod.png",
+    icon: "/pickles.jpg",
+    shortcut: "/pickles.jpg",
+    apple: "/pickles.jpg",
   },
 };
 

@@ -33,7 +33,7 @@ const toolComponents: Record<string, React.ComponentType> = {
   "palette-genny": dynamic(() => import("@/components/tools/palette-genny").then(mod => mod.PaletteGennyTool)),
   "palette-collection": dynamic(() => import("@/components/tools/palette-collection").then(mod => mod.PaletteCollectionTool)),
   "tailwind-cheatsheet": dynamic(() => import("@/components/tools/tailwind-cheatsheet").then(mod => mod.TailwindCheatsheetTool)),
-  "markdown-writer": dynamic(() => import("@/components/tools/markdown-writer").then(mod => mod.MarkdownWriterTool)),
+  "markdown-writer": dynamic(() => import("@/components/tools/markdown-composer").then(mod => mod.MarkdownComposerTool)),
   "social-cropper": dynamic(() => import("@/components/tools/social-cropper").then(mod => mod.SocialCropperTool)),
   "matte-generator": dynamic(() => import("@/components/tools/matte-generator").then(mod => mod.MatteGeneratorTool)),
   "scroll-generator": dynamic(() => import("@/components/tools/scroll-generator").then(mod => mod.ScrollGeneratorTool)),
@@ -97,7 +97,7 @@ export default async function ToolPage({ params }: ToolPageProps) {
 
   return (
     <div className="p-6 md:p-8 lg:p-10">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Tool Header */}
         <div className="mb-8">
           <div className="flex items-start gap-4 mb-4">

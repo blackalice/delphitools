@@ -544,12 +544,11 @@ export function GraphCalcTool() {
   const mafsClasses = [
     "border rounded-lg overflow-hidden relative",
     "[&_.MafsView]:!bg-card",
-    // Remove text stroke (outline) and make numbers black with 50% opacity
     "[&_.mafs-shadow]:!stroke-none",
-    "[&_.MafsView_text]:!fill-black/50",
-    // Grid lines at 10% opacity (targets lines from Coordinates.Cartesian)
-    "[&_.MafsView_g_line]:stroke-black/10",
-    // Hide numbers if toggled off
+    "[&_.MafsView_text]:!fill-[var(--muted-foreground)]",
+    "[&_.MafsView_text]:opacity-80",
+    "[&_.MafsView_g_line]:stroke-[var(--border)]",
+    "[&_.MafsView_g_line]:opacity-70",
     !showNumbers && "[&_.MafsView_text]:!opacity-0",
   ].filter(Boolean).join(" ");
 
@@ -723,13 +722,13 @@ export function GraphCalcTool() {
               <Line.Segment
                 point1={[-1e9, 0]}
                 point2={[1e9, 0]}
-                color="rgba(0,0,0,0.6)"
+                color="var(--muted-foreground)"
                 weight={1.5}
               />
               <Line.Segment
                 point1={[0, -1e9]}
                 point2={[0, 1e9]}
-                color="rgba(0,0,0,0.6)"
+                color="var(--muted-foreground)"
                 weight={1.5}
               />
             </>
@@ -751,7 +750,7 @@ export function GraphCalcTool() {
         </Mafs>
 
         {/* Debug: zoom range display */}
-        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs font-mono px-2 py-1 rounded">
+        <div className="absolute right-2 bottom-2 rounded border bg-background/85 px-2 py-1 font-mono text-xs text-foreground shadow-sm backdrop-blur">
           X: {(xMax - xMin).toFixed(3)} | Y: {(yMax - yMin).toFixed(3)}
         </div>
       </div>

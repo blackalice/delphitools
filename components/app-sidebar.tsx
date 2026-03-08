@@ -62,10 +62,10 @@ export function AppSidebar() {
             >
               <Link href="/">
                 <div className="flex aspect-square size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <img src="/delphi-lowlod.png" width={64} height={64} alt="delphitools logo" className="rounded-lg border-2 border-green-800" />
+                  <img src="/pickles.jpg" width={64} height={64} alt="delphitools logo" className="rounded-lg border-2 border-green-800" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">opentools</span>
+                  <span className="font-semibold">pickletools</span>
                   <span className="text-xs text-muted-foreground">
                     useful things
                   </span>
@@ -234,18 +234,9 @@ export function AppSidebar() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>About delphitools</DialogTitle>
+              <DialogTitle>About delphitools/pickletools</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 text-sm text-muted-foreground">
-              <p>
-                delphitools is a collection of small, focused utilities that respect your privacy
-                and work entirely in your browser. No data leaves your machine, no accounts required,
-                no tracking. Just tools that do what they say.
-              </p>
-              <p>
-                I love the web. The classic, real web full of weird things. And that web is out there. You just have to find it. And sometimes, you have to make it yourself.
-              </p>
-            </div>
+
             <div className="grid gap-4 sm:grid-cols-2 text-sm pt-4 border-t">
               <div className="space-y-1">
                 <h3 className="font-medium text-foreground">Made by</h3>
@@ -258,18 +249,27 @@ export function AppSidebar() {
                   >
                     delphi
                   </a>
+&nbsp;& forked by&nbsp; 
+                        <a
+                    href="https://rtfoy.co.uk"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary transition-colors"
+                  >
+                    foy
+                  </a>
                 </p>
               </div>
               <div className="space-y-1">
                 <h3 className="font-medium text-foreground">Source</h3>
                 <p className="text-muted-foreground">
                   <a
-                    href="https://github.com/1612elphi/delphitools"
+                    href="https://github.com/blackalice/delphitools"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-primary transition-colors"
                   >
-                    1612elphi/delphitools
+                    blackalice/delphitools
                   </a>
                 </p>
               </div>

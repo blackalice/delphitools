@@ -202,61 +202,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="mt-16 border-t pt-8">
-        <div className="max-w-2xl space-y-6">
-          <h2 className="text-lg font-semibold text-foreground/80">About</h2>
-
-          <div className="space-y-4 text-sm text-muted-foreground">
-            <p>
-              delphitools is a collection of small, focused utilities that
-              respect your privacy and work entirely in your browser. No data
-              leaves your machine, no accounts required, no tracking. Just
-              tools that do what they say.
-            </p>
-            <p>
-              I love the web. The classic, real web full of weird things. And
-              that web is out there. You just have to find it. And sometimes,
-              you have to make it yourself.
-            </p>
-          </div>
-
-          <div className="grid gap-4 text-sm sm:grid-cols-2">
-            <div className="space-y-2">
-              <h3 className="font-medium text-foreground/80">Made by</h3>
-              <p className="text-muted-foreground">
-                <a
-                  className="transition-colors hover:text-primary"
-                  href="https://rmv.fyi"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  delphi
-                </a>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-medium text-foreground/80">Source</h3>
-              <p className="text-muted-foreground">
-                <a
-                  className="transition-colors hover:text-primary"
-                  href="https://github.com/1612elphi/delphitools"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  1612elphi/delphitools
-                </a>
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-border/50 pt-4">
-            <p className="text-xs text-muted-foreground/60">
-              Built with Next.js, Tailwind CSS, and shadcn/ui. All processing
-              happens locally in your browser.
-            </p>
-          </div>
-        </div>
-      </div>
+      
     </div>
   );
 }

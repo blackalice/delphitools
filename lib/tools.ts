@@ -334,10 +334,11 @@ export const toolCategories: ToolCategory[] = [
     tools: [
       {
         id: "markdown-writer",
-        name: "Text Scratchpad",
-        description: "Text editor with manipulation tools",
+        name: "Markdown Writer",
+        description: "Compose Markdown with a live preview",
         icon: PenLine,
         href: "/tools/markdown-writer",
+        new: true,
       },
       {
         id: "tailwind-cheatsheet",
