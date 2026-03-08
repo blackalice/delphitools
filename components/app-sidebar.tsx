@@ -1,8 +1,9 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Info, Star } from "lucide-react";
+import { Home, Info, Search, Star, X } from "lucide-react";
 
 import { toolCategories } from "@/lib/tools";
 import { useFavorites } from "@/components/favorites-provider";
@@ -13,6 +14,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -26,10 +28,50 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+function matchesToolSearch(tool: { name: string; description: string }, query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return (
+    tool.name.toLowerCase().includes(normalizedQuery) ||
+    tool.description.toLowerCase().includes(normalizedQuery)
+  );
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { favouriteTools } = useFavorites();
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+
+  const filteredFavouriteTools = React.useMemo(
+    () =>
+      favouriteTools.filter((tool) => matchesToolSearch(tool, deferredSearchQuery)),
+    [deferredSearchQuery, favouriteTools]
+  );
+
+  const filteredCategories = React.useMemo(
+    () =>
+      toolCategories
+        .map((category) => ({
+          ...category,
+          tools: category.tools.filter((tool) =>
+            matchesToolSearch(tool, deferredSearchQuery)
+          ),
+        }))
+        .filter((category) => category.tools.length > 0),
+    [deferredSearchQuery]
+  );
+
+  const hasActiveSearch = deferredSearchQuery.trim().length > 0;
+  const hasToolResults =
+    filteredFavouriteTools.length > 0 ||
+    filteredCategories.some((category) => category.tools.length > 0);
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -55,6 +97,30 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div className="group-data-[collapsible=icon]:hidden">
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <SidebarInput
+              aria-label="Search tools"
+              className="h-9 border-sidebar-border bg-sidebar pr-9 pl-8"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search tools..."
+              value={searchQuery}
+            />
+            {searchQuery && (
+              <Button
+                aria-label="Clear search"
+                className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+                onClick={() => setSearchQuery("")}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <X className="size-4" />
+              </Button>
+            )}
+          </div>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
@@ -75,45 +141,69 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-1.5">
-            <Star className="size-3 text-amber-500 fill-amber-500" />
-            Favourites
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {favouriteTools.length > 0 ? (
-                favouriteTools.map((tool) => {
-                  const Icon = tool.icon;
-                  const isActive = pathname === tool.href;
-                  return (
-                    <SidebarMenuItem key={tool.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={tool.name}
-                        className="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
-                      >
-                        <Link href={tool.href} prefetch={false}>
-                          <Icon className="size-4" />
-                          <span>{tool.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })
-              ) : (
-                <SidebarMenuItem>
-                  <div className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                    Star tools on the home page to add them here.
-                  </div>
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {(!hasActiveSearch || filteredFavouriteTools.length > 0 || favouriteTools.length === 0) && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center gap-1.5">
+              <Star className="size-3 text-amber-500 fill-amber-500" />
+              Favourites
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredFavouriteTools.length > 0 ? (
+                  filteredFavouriteTools.map((tool) => {
+                    const Icon = tool.icon;
+                    const isActive = pathname === tool.href;
+                    return (
+                      <SidebarMenuItem key={tool.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={tool.name}
+                          className="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                        >
+                          <Link href={tool.href} prefetch={false}>
+                            <Icon className="size-4" />
+                            <span>{tool.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })
+                ) : !hasActiveSearch && favouriteTools.length > 0 ? (
+                  favouriteTools.map((tool) => {
+                    const Icon = tool.icon;
+                    const isActive = pathname === tool.href;
+                    return (
+                      <SidebarMenuItem key={tool.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={tool.name}
+                          className="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+                        >
+                          <Link href={tool.href} prefetch={false}>
+                            <Icon className="size-4" />
+                            <span>{tool.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })
+                ) : (
+                  <SidebarMenuItem>
+                    <div className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                      {hasActiveSearch
+                        ? "No favourite tools match your search."
+                        : "Star tools on the home page to add them here."}
+                    </div>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        {toolCategories.map((category) => (
+        {filteredCategories.map((category) => (
           <SidebarGroup key={category.id}>
             <SidebarGroupLabel>{category.name}</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -140,6 +230,16 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {hasActiveSearch && !hasToolResults && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <div className="px-2 py-1 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
+                No tools match &quot;{deferredSearchQuery.trim()}&quot;.
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

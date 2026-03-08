@@ -38,6 +38,7 @@
     "crypto-js": "^4.2.0",
     "function-plot": "^1.25.3",
     "gifenc": "^1.0.3",
+    "gifsicle-wasm-browser": "^1.5.19",
     "imagetracerjs": "^1.2.6",
     "jszip": "^3.10.1",
     "katex": "^0.16.27",

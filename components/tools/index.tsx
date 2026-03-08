@@ -15,6 +15,7 @@ import { EncoderTool } from "./encoder";
 import { ImageTracerTool } from "./image-tracer";
 import { GuillotineDirectorTool } from "./guillotine-director";
 import { PdfPreflightTool } from "./pdf-preflight";
+import { GifOptimiserTool } from "./gif-optimiser";
 
 export const toolComponents: Record<string, React.ComponentType> = {
   "px-to-rem": PxToRemTool,
@@ -30,6 +31,7 @@ export const toolComponents: Record<string, React.ComponentType> = {
   "unit-converter": UnitConverterTool,
   "encoder": EncoderTool,
   "image-tracer": ImageTracerTool,
+  "gif-optimiser": GifOptimiserTool,
   "guillotine-director": GuillotineDirectorTool,
   "pdf-preflight": PdfPreflightTool,
 };

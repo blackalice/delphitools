@@ -174,6 +174,14 @@ export const toolCategories: ToolCategory[] = [
         href: "/tools/svg-optimiser",
       },
       {
+        id: "gif-optimiser",
+        name: "GIF Optimiser",
+        description: "Optimise GIFs locally with gifsicle WASM",
+        icon: FileImage,
+        href: "/tools/gif-optimiser",
+        new: true,
+      },
+      {
         id: "placeholder-genny",
         name: "Placeholder Generator",
         description: "Generate placeholder images",
