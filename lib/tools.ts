@@ -39,6 +39,7 @@ import {
   ScanLine,
   Slice,
   FileSearch,
+  FileDiff,
 } from "lucide-react";
 
 export interface Tool {
@@ -286,6 +287,14 @@ export const toolCategories: ToolCategory[] = [
         description: "Convert WOFF and WOFF2 webfonts back to TTF or OTF locally",
         icon: FileType,
         href: "/tools/font-converter",
+        new: true,
+      },
+      {
+        id: "diff-checker",
+        name: "Diff Checker",
+        description: "Compare two text blocks and highlight line-level differences",
+        icon: FileDiff,
+        href: "/tools/diff-checker",
         new: true,
       },
     ],
