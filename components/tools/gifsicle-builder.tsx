@@ -26,6 +26,8 @@ const GIFSICLE_INFO = {
   downloadUrl: "https://www.lcdf.org/gifsicle/",
 };
 
+const GIF_COLOUR_OPTIONS = ["256", "128", "64", "32", "16", "8", "4", "2"] as const;
+
 interface BuilderState {
   workflow: Workflow;
   inputPath: string;
@@ -165,6 +167,15 @@ const COPY: Record<Workflow, { title: string; description: string }> = {
 };
 
 const quote = (value: string) => `"${value.replace(/"/g, '\\"')}"`;
+
+const replaceGifExtension = (value: string, fallbackBase: string) => {
+  const trimmed = value.trim();
+  const base = trimmed || fallbackBase;
+  if (/\.[^./\\]+$/.test(base)) {
+    return base.replace(/\.[^./\\]+$/, ".gif");
+  }
+  return `${base}.gif`;
+};
 
 function buildGifsicleArgs(state: BuilderState, inputRef: string, outputRef: string) {
   const args: string[] = ["gifsicle"];
@@ -320,6 +331,10 @@ export function GifsicleBuilderTool() {
 
   const supportsBatch = state.workflow === "optimise" || state.workflow === "resize";
 
+  const updateOutputPath = (value: string) => {
+    update("outputPath", replaceGifExtension(value, state.workflow === "extract" ? "frame-#" : "output"));
+  };
+
   const copyCommand = async () => {
     await navigator.clipboard.writeText(result.command);
     setCopied(true);
@@ -351,13 +366,22 @@ export function GifsicleBuilderTool() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gifsicle-output">Output</Label>
-                  <Input id="gifsicle-output" value={state.outputPath} onChange={(event) => update("outputPath", event.target.value)} />
+                  <Input id="gifsicle-output" value={state.outputPath} onChange={(event) => updateOutputPath(event.target.value)} />
                 </div>
 
                 {(state.workflow === "optimise" || state.workflow === "resize") && (
                   <div className="space-y-2">
-                    <Label htmlFor="gifsicle-opt">Optimise Level</Label>
-                    <Input id="gifsicle-opt" value={state.optimiseLevel} onChange={(event) => update("optimiseLevel", event.target.value as "1" | "2" | "3")} />
+                    <Label>Optimise Level</Label>
+                    <Select value={state.optimiseLevel} onValueChange={(value) => update("optimiseLevel", value as "1" | "2" | "3")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
@@ -368,8 +392,19 @@ export function GifsicleBuilderTool() {
                       <Input id="gifsicle-lossy" value={state.lossy} onChange={(event) => update("lossy", event.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gifsicle-colours">Colours</Label>
-                      <Input id="gifsicle-colours" value={state.colours} onChange={(event) => update("colours", event.target.value)} />
+                      <Label>Colours</Label>
+                      <Select value={state.colours} onValueChange={(value) => update("colours", value)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GIF_COLOUR_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </>
                 )}

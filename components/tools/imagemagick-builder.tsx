@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Workflow = "resize" | "convert" | "montage" | "annotate";
 type Gravity = "northwest" | "north" | "northeast" | "west" | "center" | "east" | "southwest" | "south" | "southeast";
+type OutputFormat = "png" | "jpg" | "webp" | "gif";
 type BatchShell = "powershell" | "bash";
 
 const IMAGEMAGICK_INFO = {
@@ -27,10 +28,20 @@ const IMAGEMAGICK_INFO = {
   downloadUrl: "https://imagemagick.org/script/download.php",
 };
 
+const OUTPUT_FORMAT_OPTIONS: Array<{ value: OutputFormat; label: string }> = [
+  { value: "png", label: "PNG" },
+  { value: "jpg", label: "JPEG" },
+  { value: "webp", label: "WebP" },
+  { value: "gif", label: "GIF" },
+];
+
+const PALETTE_COLOUR_OPTIONS = ["none", "256", "128", "64", "32", "16", "8", "4", "2"] as const;
+
 interface BuilderState {
   workflow: Workflow;
   inputPath: string;
   outputPath: string;
+  outputFormat: OutputFormat;
   width: string;
   height: string;
   quality: string;
@@ -61,6 +72,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     workflow: "resize",
     inputPath: "input.png",
     outputPath: "output.png",
+    outputFormat: "png",
     width: "1600",
     height: "",
     quality: "85",
@@ -89,6 +101,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     workflow: "convert",
     inputPath: "input.png",
     outputPath: "output.webp",
+    outputFormat: "webp",
     width: "",
     height: "",
     quality: "82",
@@ -117,6 +130,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     workflow: "montage",
     inputPath: "images/*.jpg",
     outputPath: "contact-sheet.jpg",
+    outputFormat: "jpg",
     width: "400",
     height: "400",
     quality: "85",
@@ -145,6 +159,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     workflow: "annotate",
     inputPath: "input.jpg",
     outputPath: "annotated.jpg",
+    outputFormat: "jpg",
     width: "",
     height: "",
     quality: "90",
@@ -192,8 +207,26 @@ const COPY: Record<Workflow, { title: string; description: string }> = {
 
 const quote = (value: string) => `"${value.replace(/"/g, '\\"')}"`;
 
-const getFinalExtension = (state: BuilderState) =>
-  state.batchOutputExtension.trim() || state.outputPath.split(".").pop() || "png";
+const replaceExtension = (value: string, extension: OutputFormat, fallbackBase: string) => {
+  const trimmed = value.trim();
+  const base = trimmed || fallbackBase;
+  if (/\.[^./\\]+$/.test(base)) {
+    return base.replace(/\.[^./\\]+$/, `.${extension}`);
+  }
+  return `${base}.${extension}`;
+};
+
+const supportsPaletteColours = (format: OutputFormat) => format === "png" || format === "gif";
+
+const getFinalExtension = (state: BuilderState) => state.outputFormat;
+
+const syncOutputFormatState = (current: BuilderState, outputFormat: OutputFormat): BuilderState => ({
+  ...current,
+  outputFormat,
+  outputPath: replaceExtension(current.outputPath, outputFormat, current.workflow === "montage" ? "contact-sheet" : "output"),
+  batchOutputExtension: outputFormat,
+  colorCount: supportsPaletteColours(outputFormat) ? (current.colorCount && current.colorCount !== "none" ? current.colorCount : "256") : "none",
+});
 
 function buildImagemagickArgs(state: BuilderState, inputRef: string, outputRef: string) {
   const args: string[] = [];
@@ -224,9 +257,9 @@ function buildImagemagickArgs(state: BuilderState, inputRef: string, outputRef: 
     notes.push(`Resizes the image to ${geometry}.`);
   }
 
-  if (state.colorCount.trim()) {
+  if (supportsPaletteColours(state.outputFormat) && state.colorCount !== "none") {
     args.push("-colors", state.colorCount.trim());
-    notes.push(`Limits the output palette to ${state.colorCount.trim()} colours, useful for 8-bit style PNG output.`);
+    notes.push(`Limits the output palette to ${state.colorCount.trim()} colours for ${state.outputFormat.toUpperCase()} output.`);
   }
 
   if (state.workflow === "annotate") {
@@ -251,7 +284,7 @@ function buildImagemagickArgs(state: BuilderState, inputRef: string, outputRef: 
   args.push(outputRef);
 
   if (state.workflow === "convert") {
-    notes.push("Converts the file based on the requested output extension.");
+    notes.push(`Converts the file into ${state.outputFormat.toUpperCase()}.`);
   }
 
   return { args, notes };
@@ -333,7 +366,7 @@ export function ImagemagickBuilderTool() {
         notes.push("Searches subfolders recursively.");
       }
       if (state.batchReplaceOriginal) {
-        notes.push("Writes to a temporary file and only replaces the original after a successful conversion.");
+        notes.push(`Writes to a temporary .${getFinalExtension(state)} file and only replaces the original after a successful conversion.`);
       } else {
         notes.push(`Writes new files using the suffix ${state.batchNameSuffix || "-out"} and the .${getFinalExtension(state)} extension.`);
       }
@@ -358,6 +391,14 @@ export function ImagemagickBuilderTool() {
 
   const update = <K extends keyof BuilderState>(key: K, value: BuilderState[K]) => {
     setState((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateOutputPath = (value: string) => {
+    update("outputPath", replaceExtension(value, state.outputFormat, state.workflow === "montage" ? "contact-sheet" : "output"));
+  };
+
+  const setOutputFormat = (value: OutputFormat) => {
+    setState((current) => syncOutputFormatState(current, value));
   };
 
   const supportsBatch = state.workflow !== "montage";
@@ -393,7 +434,22 @@ export function ImagemagickBuilderTool() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="magick-output">Output</Label>
-                  <Input id="magick-output" value={state.outputPath} onChange={(event) => update("outputPath", event.target.value)} />
+                  <Input id="magick-output" value={state.outputPath} onChange={(event) => updateOutputPath(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Output Format</Label>
+                  <Select value={state.outputFormat} onValueChange={(value) => setOutputFormat(value as OutputFormat)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OUTPUT_FORMAT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {state.workflow !== "annotate" && (
@@ -415,10 +471,23 @@ export function ImagemagickBuilderTool() {
                       <Label htmlFor="magick-quality">Quality</Label>
                       <Input id="magick-quality" value={state.quality} onChange={(event) => update("quality", event.target.value)} />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="magick-colorCount">Colour Count</Label>
-                      <Input id="magick-colorCount" value={state.colorCount} onChange={(event) => update("colorCount", event.target.value)} placeholder="256" />
-                    </div>
+                    {supportsPaletteColours(state.outputFormat) && (
+                      <div className="space-y-2">
+                        <Label>Palette Colours</Label>
+                        <Select value={state.colorCount || "none"} onValueChange={(value) => update("colorCount", value)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PALETTE_COLOUR_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option === "none" ? "Full colour" : option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -546,8 +615,8 @@ export function ImagemagickBuilderTool() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="magick-batch-ext">Output Extension</Label>
-              <Input id="magick-batch-ext" value={state.batchOutputExtension} onChange={(event) => update("batchOutputExtension", event.target.value)} disabled={!state.batchMode} placeholder="png" />
+              <Label>Batch Output Format</Label>
+              <Input value={state.outputFormat.toUpperCase()} readOnly disabled={!state.batchMode} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="magick-batch-suffix">New File Suffix</Label>
