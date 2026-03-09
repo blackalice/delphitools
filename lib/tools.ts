@@ -341,6 +341,13 @@ export const toolCategories: ToolCategory[] = [
         new: true,
       },
       {
+        id: "text-scratchpad",
+        name: "Text Scratchpad",
+        description: "Text editor with manipulation tools",
+        icon: FileText,
+        href: "/tools/text-scratchpad",
+      },
+      {
         id: "tailwind-cheatsheet",
         name: "Tailwind Cheat Sheet",
         description: "Quick reference for Tailwind classes",
