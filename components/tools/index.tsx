@@ -19,6 +19,9 @@ import { GifOptimiserTool } from "./gif-optimiser";
 import { FontConverterTool } from "./font-converter";
 import { DiffCheckerTool } from "./diff-checker";
 import { TextScratchpadTool } from "./text-scratchpad";
+import { FfmpegBuilderTool } from "./ffmpeg-builder";
+import { ImagemagickBuilderTool } from "./imagemagick-builder";
+import { GifsicleBuilderTool } from "./gifsicle-builder";
 
 export const toolComponents: Record<string, React.ComponentType> = {
   "px-to-rem": PxToRemTool,
@@ -38,6 +41,9 @@ export const toolComponents: Record<string, React.ComponentType> = {
   "font-converter": FontConverterTool,
   "diff-checker": DiffCheckerTool,
   "text-scratchpad": TextScratchpadTool,
+  "ffmpeg-builder": FfmpegBuilderTool,
+  "imagemagick-builder": ImagemagickBuilderTool,
+  "gifsicle-builder": GifsicleBuilderTool,
   "guillotine-director": GuillotineDirectorTool,
   "pdf-preflight": PdfPreflightTool,
 };

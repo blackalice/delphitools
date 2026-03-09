@@ -4,7 +4,7 @@ This document describes the current tool set shipped by the app, based on the to
 
 ## App-wide capabilities
 
-- 46 browser-based utilities grouped into 7 categories.
+- 48 browser-based utilities grouped into 8 categories.
 - Local-first privacy model: no accounts, no tracking, and processing stays on the user's machine.
 - Search filters both the sidebar navigation and the home page tool library.
 - Favourites can be starred from the home page and are surfaced in the sidebar and on the home page.
@@ -71,6 +71,12 @@ This document describes the current tool set shipped by the app, based on the to
 - `/tools/code-genny` - Barcode Generator: generate Data Matrix, Aztec, PDF417, Code 128, EAN-13, and more.
 - `/tools/meta-tag-genny` - Meta Tag Generator: generate HTML meta tags.
 - `/tools/regex-tester` - Regex Tester: test regular expressions.
+
+### Command Line Helpers
+
+- `/tools/ffmpeg-builder` - FFmpeg Command Builder: build common FFmpeg commands without memorising flags. `New`
+- `/tools/imagemagick-builder` - ImageMagick Command Builder: build common ImageMagick commands without memorising flags. `New`
+- `/tools/gifsicle-builder` - gifsicle Command Builder: build common gifsicle commands without memorising flags. `New`
 
 ### Calculators
 

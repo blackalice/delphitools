@@ -40,6 +40,7 @@ import {
   Slice,
   FileSearch,
   FileDiff,
+  TerminalSquare,
 } from "lucide-react";
 
 export interface Tool {
@@ -381,6 +382,36 @@ export const toolCategories: ToolCategory[] = [
         description: "Test regular expressions",
         icon: Regex,
         href: "/tools/regex-tester",
+      },
+    ],
+  },
+  {
+    id: "command-line-helpers",
+    name: "Command Line Helpers",
+    tools: [
+      {
+        id: "ffmpeg-builder",
+        name: "FFmpeg Command Builder",
+        description: "Build common FFmpeg commands without memorising flags",
+        icon: TerminalSquare,
+        href: "/tools/ffmpeg-builder",
+        new: true,
+      },
+      {
+        id: "imagemagick-builder",
+        name: "ImageMagick Command Builder",
+        description: "Build common ImageMagick commands without memorising flags",
+        icon: Image,
+        href: "/tools/imagemagick-builder",
+        new: true,
+      },
+      {
+        id: "gifsicle-builder",
+        name: "gifsicle Command Builder",
+        description: "Build common gifsicle commands without memorising flags",
+        icon: FileImage,
+        href: "/tools/gifsicle-builder",
+        new: true,
       },
     ],
   },
