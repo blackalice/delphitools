@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Workflow = "optimise" | "resize" | "extract" | "join";
 type BatchShell = "powershell" | "bash";
+type ResizeMode = "dimensions" | "scale";
 
 const GIFSICLE_INFO = {
   name: "gifsicle",
@@ -37,6 +38,7 @@ interface BuilderState {
   width: string;
   height: string;
   scale: string;
+  resizeMode: ResizeMode;
   frameRange: string;
   delay: string;
   loopCount: string;
@@ -62,6 +64,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     width: "",
     height: "",
     scale: "",
+    resizeMode: "dimensions",
     frameRange: "",
     delay: "6",
     loopCount: "0",
@@ -85,6 +88,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     width: "640",
     height: "",
     scale: "",
+    resizeMode: "dimensions",
     frameRange: "",
     delay: "6",
     loopCount: "0",
@@ -108,6 +112,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     width: "",
     height: "",
     scale: "",
+    resizeMode: "dimensions",
     frameRange: "#0-10",
     delay: "6",
     loopCount: "0",
@@ -131,6 +136,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     width: "",
     height: "",
     scale: "",
+    resizeMode: "dimensions",
     frameRange: "",
     delay: "6",
     loopCount: "0",
@@ -166,7 +172,29 @@ const COPY: Record<Workflow, { title: string; description: string }> = {
   },
 };
 
+const RECIPES: Record<Workflow, Array<{ value: string; label: string; patch: Partial<BuilderState> }>> = {
+  optimise: [
+    { value: "lossy-web", label: "Lossy Web GIF", patch: { outputPath: "web.gif", lossy: "80", colours: "128", optimiseLevel: "3" } },
+    { value: "balanced", label: "Balanced Optimise", patch: { outputPath: "optimised.gif", lossy: "40", colours: "256", optimiseLevel: "2" } },
+  ],
+  resize: [
+    { value: "half-size", label: "Half Size", patch: { outputPath: "half-size.gif", resizeMode: "scale", scale: "0.5" } },
+    { value: "social-width", label: "720px Wide", patch: { outputPath: "social.gif", resizeMode: "dimensions", width: "720", height: "" } },
+  ],
+  extract: [
+    { value: "first-ten", label: "First 10 Frames", patch: { outputPath: "frame-#.gif", frameRange: "#0-10" } },
+    { value: "single-frame", label: "Single Frame", patch: { outputPath: "frame-#.gif", frameRange: "#0" } },
+  ],
+  join: [
+    { value: "looping-join", label: "Loop Forever", patch: { inputPath: "frame-*.gif", outputPath: "combined.gif", delay: "6", loopCount: "0" } },
+    { value: "slow-join", label: "Slow Slideshow", patch: { inputPath: "frame-*.gif", outputPath: "slideshow.gif", delay: "12", loopCount: "0" } },
+  ],
+};
+
 const quote = (value: string) => `"${value.replace(/"/g, '\\"')}"`;
+
+const renderInputValue = (value: string, allowPattern = false) =>
+  allowPattern && /[*?\[]/.test(value) ? value : quote(value);
 
 const replaceGifExtension = (value: string, fallbackBase: string) => {
   const trimmed = value.trim();
@@ -176,6 +204,36 @@ const replaceGifExtension = (value: string, fallbackBase: string) => {
   }
   return `${base}.gif`;
 };
+
+const applyWorkflowPreset = (current: BuilderState, workflow: Workflow): BuilderState => ({
+  ...PRESETS[workflow],
+  inputPath: current.inputPath,
+  outputPath: replaceGifExtension(current.outputPath, workflow === "extract" ? "frame-#" : workflow === "join" ? "combined" : "output"),
+  lossy: current.lossy,
+  colours: current.colours,
+  width: current.width,
+  height: current.height,
+  scale: current.scale,
+  resizeMode: current.resizeMode,
+  frameRange: current.frameRange,
+  delay: current.delay,
+  loopCount: current.loopCount,
+  extraFlags: current.extraFlags,
+  optimiseLevel: current.optimiseLevel,
+  batchMode: workflow === "optimise" || workflow === "resize" ? current.batchMode : false,
+  batchDirectory: current.batchDirectory,
+  batchPattern: current.batchPattern,
+  batchRecursive: current.batchRecursive,
+  batchReplaceOriginal: current.batchReplaceOriginal,
+  batchShell: current.batchShell,
+  batchNameSuffix: current.batchNameSuffix,
+  batchTempSuffix: current.batchTempSuffix,
+});
+
+const applyRecipePatch = (current: BuilderState, patch: Partial<BuilderState>): BuilderState => ({
+  ...current,
+  ...patch,
+});
 
 function buildGifsicleArgs(state: BuilderState, inputRef: string, outputRef: string) {
   const args: string[] = ["gifsicle"];
@@ -220,9 +278,9 @@ function buildGifsicleArgs(state: BuilderState, inputRef: string, outputRef: str
   }
 
   if (state.workflow === "resize") {
-    if (state.scale.trim()) {
-      args.push("--scale", state.scale.trim());
-      notes.push(`Scales the GIF by ${state.scale.trim()}x.`);
+    if (state.resizeMode === "scale") {
+      args.push("--scale", state.scale.trim() || "0.5");
+      notes.push(`Scales the GIF by ${state.scale.trim() || "0.5"}x.`);
     } else {
       args.push("--resize", `${state.width.trim() || "_"}x${state.height.trim() || "_"}`);
       notes.push(`Resizes the GIF to ${state.width.trim() || "_"}x${state.height.trim() || "_"}.`);
@@ -285,7 +343,7 @@ const buildBashBatchScript = (state: BuilderState) => {
   lines.push(`  ${rendered}`);
   lines.push("  if [ $? -eq 0 ]; then");
   if (state.batchReplaceOriginal) {
-    lines.push("    mv \"$temp_path\" \"$file\"");
+    lines.push("    mv -f \"$temp_path\" \"$file\"");
   }
   lines.push("  fi");
   lines.push("done");
@@ -295,11 +353,17 @@ const buildBashBatchScript = (state: BuilderState) => {
 
 export function GifsicleBuilderTool() {
   const [state, setState] = useState<BuilderState>(PRESETS.optimise);
-  const [copied, setCopied] = useState(false);
+  const [copiedKind, setCopiedKind] = useState<"output" | "flags" | null>(null);
+  const [outputView, setOutputView] = useState<"compact" | "wrapped">("wrapped");
 
   const result = useMemo(() => {
-    const single = buildGifsicleArgs(state, quote(state.inputPath), quote(state.outputPath));
+    const single = buildGifsicleArgs(state, renderInputValue(state.inputPath, state.workflow === "join"), quote(state.outputPath));
     const notes = [...single.notes];
+    const warnings: string[] = [];
+
+    if (state.workflow === "join" && /[*?\[]/.test(state.inputPath)) {
+      notes.push("Leaves the input pattern unquoted so your shell or gifsicle can expand multiple files.");
+    }
 
     if (state.batchMode && (state.workflow === "optimise" || state.workflow === "resize")) {
       notes.push(`Builds a ${state.batchShell === "powershell" ? "PowerShell" : "Bash"} batch script for GIF files matching ${state.batchPattern || "*.gif"} in ${state.batchDirectory || "."}.`);
@@ -308,21 +372,29 @@ export function GifsicleBuilderTool() {
       }
       if (state.batchReplaceOriginal) {
         notes.push("Writes to a temporary GIF and replaces the original only after success.");
+        warnings.push("Replace-original mode overwrites source files. Test the script on a copy of the folder first.");
       } else {
         notes.push(`Writes new files using the suffix ${state.batchNameSuffix || "-out"}.`);
       }
+      const batchArgs = buildGifsicleArgs(
+        state,
+        state.batchShell === "powershell" ? quote("$($file.FullName)") : "\"$file\"",
+        state.batchShell === "powershell" ? quote("$outputPath") : "\"$output_path\""
+      ).args;
       return {
         command: state.batchShell === "powershell" ? buildPowerShellBatchScript(state) : buildBashBatchScript(state),
+        flags: batchArgs.slice(1).join(" "),
         notes,
+        warnings,
         heading: `Generated ${state.batchShell === "powershell" ? "PowerShell" : "Bash"} Script`,
       };
     }
 
-    return { command: single.args.join(" "), notes, heading: "Generated Command" };
+    return { command: single.args.join(" "), flags: single.args.slice(1).join(" "), notes, warnings, heading: "Generated Command" };
   }, [state]);
 
   const setWorkflow = (workflow: Workflow) => {
-    setState(PRESETS[workflow]);
+    setState((current) => applyWorkflowPreset(current, workflow));
   };
 
   const update = <K extends keyof BuilderState>(key: K, value: BuilderState[K]) => {
@@ -335,10 +407,22 @@ export function GifsicleBuilderTool() {
     update("outputPath", replaceGifExtension(value, state.workflow === "extract" ? "frame-#" : "output"));
   };
 
-  const copyCommand = async () => {
-    await navigator.clipboard.writeText(result.command);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+  const copyText = async (value: string, kind: "output" | "flags") => {
+    await navigator.clipboard.writeText(value);
+    setCopiedKind(kind);
+    window.setTimeout(() => setCopiedKind(null), 1500);
+  };
+
+  const loadRecipe = (recipeValue: string) => {
+    const recipe = RECIPES[state.workflow].find((option) => option.value === recipeValue);
+    if (!recipe) {
+      return;
+    }
+    setState((current) => applyRecipePatch(current, recipe.patch));
+  };
+
+  const resetWorkflowDefaults = () => {
+    setState((current) => applyWorkflowPreset(current, current.workflow));
   };
 
   return (
@@ -361,8 +445,31 @@ export function GifsicleBuilderTool() {
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
+                  <Label>Recipe</Label>
+                  <Select onValueChange={loadRecipe}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Load a common recipe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECIPES[state.workflow].map((recipe) => (
+                        <SelectItem key={recipe.value} value={recipe.value}>
+                          {recipe.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end justify-start md:justify-end">
+                  <Button variant="outline" onClick={resetWorkflowDefaults}>
+                    Reset Workflow Defaults
+                  </Button>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="gifsicle-input">Input</Label>
                   <Input id="gifsicle-input" value={state.inputPath} onChange={(event) => update("inputPath", event.target.value)} />
+                  {state.workflow === "join" && (
+                    <p className="text-xs text-muted-foreground">Use a glob such as `frame-*.gif` when joining multiple inputs.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gifsicle-output">Output</Label>
@@ -412,17 +519,34 @@ export function GifsicleBuilderTool() {
                 {state.workflow === "resize" && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="gifsicle-width">Width</Label>
-                      <Input id="gifsicle-width" value={state.width} onChange={(event) => update("width", event.target.value)} />
+                      <Label>Resize Mode</Label>
+                      <Select value={state.resizeMode} onValueChange={(value) => update("resizeMode", value as ResizeMode)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dimensions">Width / Height</SelectItem>
+                          <SelectItem value="scale">Scale Factor</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gifsicle-height">Height</Label>
-                      <Input id="gifsicle-height" value={state.height} onChange={(event) => update("height", event.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gifsicle-scale">Scale</Label>
-                      <Input id="gifsicle-scale" value={state.scale} onChange={(event) => update("scale", event.target.value)} placeholder="0.5" />
-                    </div>
+                    {state.resizeMode === "dimensions" ? (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="gifsicle-width">Width</Label>
+                          <Input id="gifsicle-width" value={state.width} onChange={(event) => update("width", event.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="gifsicle-height">Height</Label>
+                          <Input id="gifsicle-height" value={state.height} onChange={(event) => update("height", event.target.value)} />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="gifsicle-scale">Scale</Label>
+                        <Input id="gifsicle-scale" value={state.scale} onChange={(event) => update("scale", event.target.value)} placeholder="0.5" />
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -460,13 +584,13 @@ export function GifsicleBuilderTool() {
         <Card>
           <CardHeader>
             <CardTitle>Batch Output</CardTitle>
-            <CardDescription>Generate a PowerShell loop for GIF folders, with recursive scans and safe replace-in-place output.</CardDescription>
+            <CardDescription>Generate a reusable PowerShell or Bash script for GIF folders, with recursive scans and replace-in-place output.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-wrap gap-4 text-sm md:col-span-2">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchMode} onChange={(event) => update("batchMode", event.target.checked)} />
-                Generate batch script
+                Generate folder script
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchRecursive} onChange={(event) => update("batchRecursive", event.target.checked)} disabled={!state.batchMode} />
@@ -474,7 +598,7 @@ export function GifsicleBuilderTool() {
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchReplaceOriginal} onChange={(event) => update("batchReplaceOriginal", event.target.checked)} disabled={!state.batchMode} />
-                Replace originals after success
+                Replace original after success
               </label>
             </div>
             <div className="space-y-2">
@@ -482,8 +606,9 @@ export function GifsicleBuilderTool() {
               <Input id="gifsicle-batch-dir" value={state.batchDirectory} onChange={(event) => update("batchDirectory", event.target.value)} disabled={!state.batchMode} placeholder="D:\\gifs" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="gifsicle-batch-pattern">Search Pattern</Label>
+              <Label htmlFor="gifsicle-batch-pattern">Input Pattern</Label>
               <Input id="gifsicle-batch-pattern" value={state.batchPattern} onChange={(event) => update("batchPattern", event.target.value)} disabled={!state.batchMode} placeholder="*.gif" />
+              <p className="text-xs text-muted-foreground">Use wildcards such as `*.gif` or `banner-*.gif`.</p>
             </div>
             <div className="space-y-2">
               <Label>Shell</Label>
@@ -521,19 +646,47 @@ export function GifsicleBuilderTool() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea readOnly value={result.command} className="min-h-32 font-mono text-sm" />
-            <Button onClick={copyCommand}>
-              {copied ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
-              {copied ? "Copied" : "Copy Command"}
-            </Button>
+            <div className="w-full max-w-40 space-y-2">
+              <Label>View</Label>
+              <Select value={outputView} onValueChange={(value) => setOutputView(value as "compact" | "wrapped")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wrapped">Wrapped</SelectItem>
+                  <SelectItem value="compact">Compact</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea
+              readOnly
+              wrap="soft"
+              value={result.command}
+              className="min-h-32 font-mono text-sm whitespace-pre-wrap break-all"
+            />
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => copyText(result.command, "output")}>
+                {copiedKind === "output" ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
+                {copiedKind === "output" ? "Copied Output" : "Copy Output"}
+              </Button>
+              <Button variant="outline" onClick={() => copyText(result.flags, "flags")}>
+                {copiedKind === "flags" ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
+                {copiedKind === "flags" ? "Copied Flags" : "Copy Flags"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>What This Does</CardTitle>
+            <CardTitle>Command Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
+            {result.warnings.map((warning) => (
+              <p key={warning} className="text-amber-700 dark:text-amber-300">
+                Warning: {warning}
+              </p>
+            ))}
             {result.notes.map((note) => (
               <p key={note}>{note}</p>
             ))}

@@ -62,7 +62,6 @@ interface BuilderState {
   batchRecursive: boolean;
   batchReplaceOriginal: boolean;
   batchShell: BatchShell;
-  batchOutputExtension: string;
   batchNameSuffix: string;
   batchTempSuffix: string;
 }
@@ -85,7 +84,7 @@ const PRESETS: Record<Workflow, BuilderState> = {
     gravity: "south",
     stripMetadata: true,
     preserveAspect: true,
-    colorCount: "256",
+    colorCount: "none",
     extraFlags: "",
     batchMode: false,
     batchDirectory: ".",
@@ -93,7 +92,6 @@ const PRESETS: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "png",
     batchNameSuffix: "-optimised",
     batchTempSuffix: ".tmp",
   },
@@ -122,7 +120,6 @@ const PRESETS: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "webp",
     batchNameSuffix: "-converted",
     batchTempSuffix: ".tmp",
   },
@@ -151,7 +148,6 @@ const PRESETS: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "jpg",
     batchNameSuffix: "-sheet",
     batchTempSuffix: ".tmp",
   },
@@ -180,7 +176,6 @@ const PRESETS: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "jpg",
     batchNameSuffix: "-labelled",
     batchTempSuffix: ".tmp",
   },
@@ -205,7 +200,29 @@ const COPY: Record<Workflow, { title: string; description: string }> = {
   },
 };
 
+const RECIPES: Record<Workflow, Array<{ value: string; label: string; patch: Partial<BuilderState> }>> = {
+  resize: [
+    { value: "hero-web", label: "Hero Image", patch: { outputPath: "hero.webp", outputFormat: "webp", width: "1920", height: "", quality: "82", stripMetadata: true } },
+    { value: "thumb-png", label: "Thumbnail PNG", patch: { outputPath: "thumb.png", outputFormat: "png", width: "512", height: "", quality: "90", stripMetadata: true } },
+  ],
+  convert: [
+    { value: "webp-convert", label: "PNG to WebP", patch: { outputPath: "output.webp", outputFormat: "webp", quality: "82", stripMetadata: true } },
+    { value: "jpg-export", label: "JPEG Export", patch: { outputPath: "output.jpg", outputFormat: "jpg", quality: "85", stripMetadata: true } },
+  ],
+  montage: [
+    { value: "contact-sheet", label: "4x Contact Sheet", patch: { inputPath: "images/*.jpg", outputPath: "contact-sheet.jpg", outputFormat: "jpg", columns: "4", width: "400", height: "400", spacing: "16" } },
+    { value: "small-proof", label: "Proof Sheet", patch: { inputPath: "images/*.png", outputPath: "proof-sheet.png", outputFormat: "png", columns: "5", width: "240", height: "240", spacing: "12" } },
+  ],
+  annotate: [
+    { value: "copyright", label: "Copyright Footer", patch: { outputPath: "annotated.jpg", outputFormat: "jpg", label: "Copyright 2026", gravity: "south", fontSize: "48", fill: "#ffffff" } },
+    { value: "watermark", label: "Corner Watermark", patch: { outputPath: "watermarked.png", outputFormat: "png", label: "Studio", gravity: "southeast", fontSize: "32", fill: "#ffffff" } },
+  ],
+};
+
 const quote = (value: string) => `"${value.replace(/"/g, '\\"')}"`;
+
+const renderInputValue = (value: string, allowPattern = false) =>
+  allowPattern && /[*?\[]/.test(value) ? value : quote(value);
 
 const replaceExtension = (value: string, extension: OutputFormat, fallbackBase: string) => {
   const trimmed = value.trim();
@@ -224,9 +241,58 @@ const syncOutputFormatState = (current: BuilderState, outputFormat: OutputFormat
   ...current,
   outputFormat,
   outputPath: replaceExtension(current.outputPath, outputFormat, current.workflow === "montage" ? "contact-sheet" : "output"),
-  batchOutputExtension: outputFormat,
-  colorCount: supportsPaletteColours(outputFormat) ? (current.colorCount && current.colorCount !== "none" ? current.colorCount : "256") : "none",
+  colorCount: supportsPaletteColours(outputFormat) ? current.colorCount || "none" : "none",
 });
+
+const applyWorkflowPreset = (current: BuilderState, workflow: Workflow): BuilderState => {
+  let next: BuilderState = {
+    ...PRESETS[workflow],
+    inputPath: current.inputPath,
+    width: workflow === "resize" || workflow === "montage" ? current.width : PRESETS[workflow].width,
+    height: workflow === "resize" || workflow === "montage" ? current.height : PRESETS[workflow].height,
+    quality: current.quality,
+    background: current.background,
+    columns: current.columns,
+    spacing: current.spacing,
+    label: current.label,
+    fontSize: current.fontSize,
+    fill: current.fill,
+    gravity: current.gravity,
+    stripMetadata: current.stripMetadata,
+    preserveAspect: current.preserveAspect,
+    colorCount: current.colorCount || "none",
+    extraFlags: current.extraFlags,
+    batchMode: workflow === "montage" ? false : current.batchMode,
+    batchDirectory: current.batchDirectory,
+    batchPattern: current.batchPattern,
+    batchRecursive: current.batchRecursive,
+    batchReplaceOriginal: current.batchReplaceOriginal,
+    batchShell: current.batchShell,
+    batchNameSuffix: current.batchNameSuffix,
+    batchTempSuffix: current.batchTempSuffix,
+  };
+
+  next = syncOutputFormatState(next, current.outputFormat);
+  next.outputPath = replaceExtension(current.outputPath, next.outputFormat, workflow === "montage" ? "contact-sheet" : "output");
+
+  return next;
+};
+
+const applyRecipePatch = (current: BuilderState, patch: Partial<BuilderState>): BuilderState => {
+  let next = current;
+
+  if (patch.outputFormat) {
+    next = syncOutputFormatState(next, patch.outputFormat);
+  }
+
+  next = { ...next, ...patch };
+
+  if (patch.outputPath) {
+    next.outputPath = patch.outputPath;
+  }
+
+  return next;
+};
 
 function buildImagemagickArgs(state: BuilderState, inputRef: string, outputRef: string) {
   const args: string[] = [];
@@ -310,7 +376,6 @@ const buildPowerShellBatchScript = (state: BuilderState) => {
   lines.push("  if ($LASTEXITCODE -eq 0) {");
   if (state.batchReplaceOriginal) {
     lines.push(`    $finalPath = Join-Path $file.DirectoryName ($file.BaseName + "." + ${quote(extension)})`);
-    lines.push("    if (Test-Path $file.FullName) { Remove-Item $file.FullName -Force }");
     lines.push("    Move-Item -Force $tempPath $finalPath");
   }
   lines.push("  }");
@@ -343,8 +408,7 @@ const buildBashBatchScript = (state: BuilderState) => {
   lines.push("  if [ $? -eq 0 ]; then");
   if (state.batchReplaceOriginal) {
     lines.push(`    final_path=\"$dir/$stem.${extension}\"`);
-    lines.push("    rm -f \"$file\"");
-    lines.push("    mv \"$temp_path\" \"$final_path\"");
+    lines.push("    mv -f \"$temp_path\" \"$final_path\"");
   }
   lines.push("  fi");
   lines.push("done");
@@ -354,11 +418,21 @@ const buildBashBatchScript = (state: BuilderState) => {
 
 export function ImagemagickBuilderTool() {
   const [state, setState] = useState<BuilderState>(PRESETS.resize);
-  const [copied, setCopied] = useState(false);
+  const [copiedKind, setCopiedKind] = useState<"output" | "flags" | null>(null);
+  const [outputView, setOutputView] = useState<"compact" | "wrapped">("wrapped");
 
   const result = useMemo(() => {
-    const single = buildImagemagickArgs(state, quote(state.inputPath), quote(state.outputPath));
+    const single = buildImagemagickArgs(state, renderInputValue(state.inputPath, state.workflow === "montage"), quote(state.outputPath));
     const notes = [...single.notes];
+    const warnings: string[] = [];
+
+    if (state.workflow === "montage" && /[*?\[]/.test(state.inputPath)) {
+      notes.push("Leaves the input pattern unquoted so your shell or ImageMagick can expand multiple files.");
+    }
+
+    if (supportsPaletteColours(state.outputFormat) && state.colorCount !== "none") {
+      warnings.push(`Palette reduction is enabled, so the output will be quantised to ${state.colorCount} colours.`);
+    }
 
     if (state.batchMode && state.workflow !== "montage") {
       notes.push(`Builds a ${state.batchShell === "powershell" ? "PowerShell" : "Bash"} batch script for files matching ${state.batchPattern || "*.*"} in ${state.batchDirectory || "."}.`);
@@ -367,26 +441,37 @@ export function ImagemagickBuilderTool() {
       }
       if (state.batchReplaceOriginal) {
         notes.push(`Writes to a temporary .${getFinalExtension(state)} file and only replaces the original after a successful conversion.`);
+        warnings.push("Replace-original mode overwrites source files. Test the script on a copy of the folder first.");
       } else {
         notes.push(`Writes new files using the suffix ${state.batchNameSuffix || "-out"} and the .${getFinalExtension(state)} extension.`);
       }
 
+      const batchArgs = buildImagemagickArgs(
+        state,
+        state.batchShell === "powershell" ? quote("$($file.FullName)") : "\"$file\"",
+        state.batchShell === "powershell" ? quote("$outputPath") : "\"$output_path\""
+      ).args;
+
       return {
         command: state.batchShell === "powershell" ? buildPowerShellBatchScript(state) : buildBashBatchScript(state),
+        flags: batchArgs.slice(1).join(" "),
         notes,
+        warnings,
         heading: `Generated ${state.batchShell === "powershell" ? "PowerShell" : "Bash"} Script`,
       };
     }
 
     return {
       command: single.args.join(" "),
+      flags: single.args.slice(1).join(" "),
       notes,
+      warnings,
       heading: "Generated Command",
     };
   }, [state]);
 
   const setWorkflow = (workflow: Workflow) => {
-    setState(PRESETS[workflow]);
+    setState((current) => applyWorkflowPreset(current, workflow));
   };
 
   const update = <K extends keyof BuilderState>(key: K, value: BuilderState[K]) => {
@@ -403,10 +488,22 @@ export function ImagemagickBuilderTool() {
 
   const supportsBatch = state.workflow !== "montage";
 
-  const copyCommand = async () => {
-    await navigator.clipboard.writeText(result.command);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+  const copyText = async (value: string, kind: "output" | "flags") => {
+    await navigator.clipboard.writeText(value);
+    setCopiedKind(kind);
+    window.setTimeout(() => setCopiedKind(null), 1500);
+  };
+
+  const loadRecipe = (recipeValue: string) => {
+    const recipe = RECIPES[state.workflow].find((option) => option.value === recipeValue);
+    if (!recipe) {
+      return;
+    }
+    setState((current) => applyRecipePatch(current, recipe.patch));
+  };
+
+  const resetWorkflowDefaults = () => {
+    setState((current) => applyWorkflowPreset(current, current.workflow));
   };
 
   return (
@@ -429,8 +526,31 @@ export function ImagemagickBuilderTool() {
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
+                  <Label>Recipe</Label>
+                  <Select onValueChange={loadRecipe}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Load a common recipe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECIPES[state.workflow].map((recipe) => (
+                        <SelectItem key={recipe.value} value={recipe.value}>
+                          {recipe.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end justify-start md:justify-end">
+                  <Button variant="outline" onClick={resetWorkflowDefaults}>
+                    Reset Workflow Defaults
+                  </Button>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="magick-input">Input</Label>
                   <Input id="magick-input" value={state.inputPath} onChange={(event) => update("inputPath", event.target.value)} />
+                  {state.workflow === "montage" && (
+                    <p className="text-xs text-muted-foreground">Use a glob such as `images/*.jpg` when building a contact sheet from many files.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="magick-output">Output</Label>
@@ -452,7 +572,7 @@ export function ImagemagickBuilderTool() {
                   </Select>
                 </div>
 
-                {state.workflow !== "annotate" && (
+                {(state.workflow === "resize" || state.workflow === "montage") && (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="magick-width">Width</Label>
@@ -577,13 +697,13 @@ export function ImagemagickBuilderTool() {
         <Card>
           <CardHeader>
             <CardTitle>Batch Output</CardTitle>
-            <CardDescription>Generate a PowerShell loop for whole folders, including recursive scans and replace-in-place output via temporary files.</CardDescription>
+            <CardDescription>Generate a reusable PowerShell or Bash script for whole folders, including recursive scans and replace-in-place output via temporary files.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-wrap gap-4 text-sm md:col-span-2">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchMode} onChange={(event) => update("batchMode", event.target.checked)} />
-                Generate batch script
+                Generate folder script
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchRecursive} onChange={(event) => update("batchRecursive", event.target.checked)} disabled={!state.batchMode} />
@@ -591,7 +711,7 @@ export function ImagemagickBuilderTool() {
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchReplaceOriginal} onChange={(event) => update("batchReplaceOriginal", event.target.checked)} disabled={!state.batchMode} />
-                Replace originals after success
+                Replace original after success
               </label>
             </div>
             <div className="space-y-2">
@@ -599,8 +719,9 @@ export function ImagemagickBuilderTool() {
               <Input id="magick-batch-dir" value={state.batchDirectory} onChange={(event) => update("batchDirectory", event.target.value)} disabled={!state.batchMode} placeholder="D:\\images" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="magick-batch-pattern">Search Pattern</Label>
+              <Label htmlFor="magick-batch-pattern">Input Pattern</Label>
               <Input id="magick-batch-pattern" value={state.batchPattern} onChange={(event) => update("batchPattern", event.target.value)} disabled={!state.batchMode} placeholder="*.png" />
+              <p className="text-xs text-muted-foreground">Use wildcards such as `*.png` or `photo-*.jpg`.</p>
             </div>
             <div className="space-y-2">
               <Label>Shell</Label>
@@ -614,9 +735,10 @@ export function ImagemagickBuilderTool() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Batch Output Format</Label>
-              <Input value={state.outputFormat.toUpperCase()} readOnly disabled={!state.batchMode} />
+            <div className="space-y-2 md:col-span-2">
+              <p className="text-sm text-muted-foreground">
+                Batch output uses the same format as the generated command: `.{state.outputFormat}`.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="magick-batch-suffix">New File Suffix</Label>
@@ -642,19 +764,47 @@ export function ImagemagickBuilderTool() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea readOnly value={result.command} className="min-h-32 font-mono text-sm" />
-            <Button onClick={copyCommand}>
-              {copied ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
-              {copied ? "Copied" : "Copy Command"}
-            </Button>
+            <div className="w-full max-w-40 space-y-2">
+              <Label>View</Label>
+              <Select value={outputView} onValueChange={(value) => setOutputView(value as "compact" | "wrapped")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wrapped">Wrapped</SelectItem>
+                  <SelectItem value="compact">Compact</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea
+              readOnly
+              wrap="soft"
+              value={result.command}
+              className="min-h-32 font-mono text-sm whitespace-pre-wrap break-all"
+            />
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => copyText(result.command, "output")}>
+                {copiedKind === "output" ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
+                {copiedKind === "output" ? "Copied Output" : "Copy Output"}
+              </Button>
+              <Button variant="outline" onClick={() => copyText(result.flags, "flags")}>
+                {copiedKind === "flags" ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
+                {copiedKind === "flags" ? "Copied Flags" : "Copy Flags"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>What This Does</CardTitle>
+            <CardTitle>Command Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
+            {result.warnings.map((warning) => (
+              <p key={warning} className="text-amber-700 dark:text-amber-300">
+                Warning: {warning}
+              </p>
+            ))}
             {result.notes.map((note) => (
               <p key={note}>{note}</p>
             ))}

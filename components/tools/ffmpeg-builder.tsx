@@ -21,8 +21,8 @@ type Workflow = "transcode" | "gif" | "extract-audio" | "image-sequence";
 type VideoOutputFormat = "mp4" | "mov" | "mkv" | "webm";
 type AudioOutputFormat = "mp3" | "m4a" | "opus" | "flac";
 type VideoCodec = "libx264" | "libx265" | "libvpx-vp9";
-type AudioCodec = "aac" | "libmp3lame" | "libopus" | "none";
-type AudioOnlyCodec = "aac" | "libmp3lame" | "libopus" | "flac";
+type AudioCodec = "aac" | "libmp3lame" | "libopus";
+type AudioOnlyCodec = "aac" | "libmp3lame" | "libopus" | "flac" | "copy";
 type BatchShell = "powershell" | "bash";
 
 const FFMPEG_INFO = {
@@ -50,6 +50,7 @@ interface BuilderState {
   audioBitrate: string;
   faststart: boolean;
   removeAudio: boolean;
+  gifPalette: boolean;
   loopGif: boolean;
   sequencePattern: string;
   sequenceFramerate: string;
@@ -61,9 +62,13 @@ interface BuilderState {
   batchRecursive: boolean;
   batchReplaceOriginal: boolean;
   batchShell: BatchShell;
-  batchOutputExtension: string;
   batchNameSuffix: string;
   batchTempSuffix: string;
+}
+
+interface DetailSection {
+  title: string;
+  items: string[];
 }
 
 const WORKFLOW_COPY: Record<Workflow, { title: string; description: string }> = {
@@ -77,7 +82,7 @@ const WORKFLOW_COPY: Record<Workflow, { title: string; description: string }> = 
   },
   "extract-audio": {
     title: "Extract Audio",
-    description: "Pull audio from a video file into MP3, AAC, Opus, FLAC, or a direct stream copy.",
+    description: "Pull audio from a video file into MP3, AAC, Opus, FLAC, or copy the source stream when the container supports it.",
   },
   "image-sequence": {
     title: "Image Sequence to Video",
@@ -96,28 +101,28 @@ const VIDEO_FORMAT_OPTIONS: Array<{
     value: "mp4",
     label: "MP4",
     videoCodecs: ["libx264", "libx265"],
-    audioCodecs: ["aac", "none"],
+    audioCodecs: ["aac"],
     supportsFaststart: true,
   },
   {
     value: "mov",
     label: "MOV",
     videoCodecs: ["libx264", "libx265"],
-    audioCodecs: ["aac", "none"],
+    audioCodecs: ["aac"],
     supportsFaststart: false,
   },
   {
     value: "mkv",
     label: "MKV",
     videoCodecs: ["libx264", "libx265", "libvpx-vp9"],
-    audioCodecs: ["aac", "libmp3lame", "libopus", "none"],
+    audioCodecs: ["aac", "libmp3lame", "libopus"],
     supportsFaststart: false,
   },
   {
     value: "webm",
     label: "WebM",
     videoCodecs: ["libvpx-vp9"],
-    audioCodecs: ["libopus", "none"],
+    audioCodecs: ["libopus"],
     supportsFaststart: false,
   },
 ];
@@ -133,6 +138,128 @@ const AUDIO_FORMAT_OPTIONS: Array<{
   { value: "opus", label: "Opus", codec: "libopus", bitrateLabel: "160k" },
   { value: "flac", label: "FLAC", codec: "flac", bitrateLabel: "" },
 ];
+
+const AUDIO_ONLY_CODEC_OPTIONS: Array<{ value: AudioOnlyCodec; label: string }> = [
+  { value: "aac", label: "AAC" },
+  { value: "libmp3lame", label: "MP3 (libmp3lame)" },
+  { value: "libopus", label: "Opus" },
+  { value: "flac", label: "FLAC" },
+  { value: "copy", label: "Copy Source Stream" },
+];
+
+const RECIPES: Record<Workflow, Array<{ value: string; label: string; patch: Partial<BuilderState> }>> = {
+  transcode: [
+    {
+      value: "web-mp4",
+      label: "Web MP4",
+      patch: {
+        outputPath: "web-output.mp4",
+        videoFormat: "mp4",
+        videoCodec: "libx264",
+        width: "1920",
+        fps: "30",
+        crf: "23",
+        audioCodec: "aac",
+        audioBitrate: "192k",
+        faststart: true,
+        removeAudio: false,
+      },
+    },
+    {
+      value: "light-preview",
+      label: "Light Preview",
+      patch: {
+        outputPath: "preview.mp4",
+        videoFormat: "mp4",
+        videoCodec: "libx264",
+        width: "1280",
+        fps: "24",
+        crf: "28",
+        audioCodec: "aac",
+        audioBitrate: "128k",
+        faststart: true,
+        removeAudio: false,
+      },
+    },
+  ],
+  gif: [
+    {
+      value: "social-loop",
+      label: "Social Loop",
+      patch: {
+        outputPath: "clip.gif",
+        width: "720",
+        fps: "12",
+        duration: "4",
+        gifPalette: true,
+        loopGif: true,
+      },
+    },
+    {
+      value: "tiny-preview",
+      label: "Tiny Preview",
+      patch: {
+        outputPath: "preview.gif",
+        width: "480",
+        fps: "10",
+        duration: "3",
+        gifPalette: true,
+        loopGif: true,
+      },
+    },
+  ],
+  "extract-audio": [
+    {
+      value: "podcast-mp3",
+      label: "Podcast MP3",
+      patch: {
+        outputPath: "podcast.mp3",
+        audioFormat: "mp3",
+        audioOnlyCodec: "libmp3lame",
+        audioBitrate: "192k",
+      },
+    },
+    {
+      value: "source-copy",
+      label: "Copy Source Stream",
+      patch: {
+        outputPath: "audio.m4a",
+        audioFormat: "m4a",
+        audioOnlyCodec: "copy",
+      },
+    },
+  ],
+  "image-sequence": [
+    {
+      value: "delivery-mp4",
+      label: "Delivery MP4",
+      patch: {
+        outputPath: "sequence.mp4",
+        videoFormat: "mp4",
+        videoCodec: "libx264",
+        sequenceFramerate: "24",
+        crf: "18",
+        preset: "slow",
+        pixelFormat: "yuv420p",
+        faststart: true,
+      },
+    },
+    {
+      value: "archive-mkv",
+      label: "Archive MKV",
+      patch: {
+        outputPath: "sequence.mkv",
+        videoFormat: "mkv",
+        videoCodec: "libx265",
+        sequenceFramerate: "24",
+        crf: "18",
+        preset: "medium",
+        pixelFormat: "yuv420p",
+        faststart: false,
+      },
+    },
+  ],
+};
 
 const PRESET_STATE: Record<Workflow, BuilderState> = {
   transcode: {
@@ -154,6 +281,7 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     audioBitrate: "192k",
     faststart: true,
     removeAudio: false,
+    gifPalette: true,
     loopGif: true,
     sequencePattern: "frame-%04d.png",
     sequenceFramerate: "24",
@@ -165,7 +293,6 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "mp4",
     batchNameSuffix: "-compressed",
     batchTempSuffix: ".tmp",
   },
@@ -179,7 +306,7 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     startTime: "",
     duration: "3",
     videoCodec: "libx264",
-    audioCodec: "none",
+    audioCodec: "aac",
     audioOnlyCodec: "aac",
     crf: "23",
     preset: "medium",
@@ -188,6 +315,7 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     audioBitrate: "192k",
     faststart: false,
     removeAudio: true,
+    gifPalette: true,
     loopGif: true,
     sequencePattern: "frame-%04d.png",
     sequenceFramerate: "24",
@@ -199,7 +327,6 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "gif",
     batchNameSuffix: "-gif",
     batchTempSuffix: ".tmp",
   },
@@ -222,6 +349,7 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     audioBitrate: "192k",
     faststart: false,
     removeAudio: false,
+    gifPalette: true,
     loopGif: true,
     sequencePattern: "frame-%04d.png",
     sequenceFramerate: "24",
@@ -233,7 +361,6 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "mp3",
     batchNameSuffix: "-audio",
     batchTempSuffix: ".tmp",
   },
@@ -247,7 +374,7 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     startTime: "",
     duration: "",
     videoCodec: "libx264",
-    audioCodec: "none",
+    audioCodec: "aac",
     audioOnlyCodec: "aac",
     crf: "18",
     preset: "slow",
@@ -256,6 +383,7 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     audioBitrate: "192k",
     faststart: true,
     removeAudio: true,
+    gifPalette: true,
     loopGif: true,
     sequencePattern: "frame-%04d.png",
     sequenceFramerate: "24",
@@ -267,11 +395,11 @@ const PRESET_STATE: Record<Workflow, BuilderState> = {
     batchRecursive: false,
     batchReplaceOriginal: false,
     batchShell: "powershell",
-    batchOutputExtension: "mp4",
     batchNameSuffix: "-video",
     batchTempSuffix: ".tmp",
   },
 };
+
 
 const shellQuote = (value: string) => {
   if (!value.trim()) {
@@ -291,6 +419,8 @@ const replaceExtension = (value: string, extension: string, fallbackBase: string
   }
   return `${base}.${extension}`;
 };
+
+const buildSequenceFallback = (state: BuilderState) => state.sequencePattern || PRESET_STATE["image-sequence"].sequencePattern;
 
 const getVideoFormatConfig = (format: VideoOutputFormat) =>
   VIDEO_FORMAT_OPTIONS.find((option) => option.value === format) ?? VIDEO_FORMAT_OPTIONS[0];
@@ -314,7 +444,6 @@ const syncVideoFormatState = (current: BuilderState, videoFormat: VideoOutputFor
     ...current,
     videoFormat,
     outputPath: replaceExtension(current.outputPath, videoFormat, "output"),
-    batchOutputExtension: videoFormat,
     videoCodec: format.videoCodecs.includes(current.videoCodec) ? current.videoCodec : format.videoCodecs[0],
     audioCodec: format.audioCodecs.includes(current.audioCodec) ? current.audioCodec : format.audioCodecs[0],
     faststart: format.supportsFaststart ? current.faststart : false,
@@ -327,10 +456,68 @@ const syncAudioFormatState = (current: BuilderState, audioFormat: AudioOutputFor
     ...current,
     audioFormat,
     outputPath: replaceExtension(current.outputPath, audioFormat, "output"),
-    batchOutputExtension: audioFormat,
     audioOnlyCodec: format.codec,
     audioBitrate: format.bitrateLabel || current.audioBitrate,
   };
+};
+
+const applyWorkflowPreset = (current: BuilderState, workflow: Workflow): BuilderState => {
+  let next: BuilderState = {
+    ...PRESET_STATE[workflow],
+    inputPath: current.inputPath,
+    overwrite: current.overwrite,
+    startTime: workflow === "image-sequence" ? PRESET_STATE[workflow].startTime : current.startTime,
+    duration: workflow === "image-sequence" ? PRESET_STATE[workflow].duration : current.duration,
+    width: workflow === "extract-audio" ? PRESET_STATE[workflow].width : current.width,
+    fps: workflow === "image-sequence" ? PRESET_STATE[workflow].fps : current.fps,
+    crf: workflow === "transcode" || workflow === "image-sequence" ? current.crf : PRESET_STATE[workflow].crf,
+    preset: workflow === "transcode" || workflow === "image-sequence" ? current.preset : PRESET_STATE[workflow].preset,
+    audioBitrate: current.audioBitrate,
+    faststart: current.faststart,
+    extraFlags: current.extraFlags,
+    batchMode: workflow === "image-sequence" ? false : current.batchMode,
+    batchDirectory: current.batchDirectory,
+    batchPattern: current.batchPattern,
+    batchRecursive: current.batchRecursive,
+    batchReplaceOriginal: current.batchReplaceOriginal,
+    batchShell: current.batchShell,
+    batchNameSuffix: current.batchNameSuffix,
+    batchTempSuffix: current.batchTempSuffix,
+  };
+
+  if (workflow === "transcode" || workflow === "image-sequence") {
+    next = syncVideoFormatState(next, current.videoFormat);
+    next.videoCodec = getVideoFormatConfig(next.videoFormat).videoCodecs.includes(current.videoCodec) ? current.videoCodec : next.videoCodec;
+    next.audioCodec = getVideoFormatConfig(next.videoFormat).audioCodecs.includes(current.audioCodec) ? current.audioCodec : next.audioCodec;
+  }
+
+  if (workflow === "extract-audio") {
+    next = syncAudioFormatState(next, current.audioFormat);
+    next.audioOnlyCodec = current.audioOnlyCodec;
+  }
+
+  next.outputPath = replaceExtension(current.outputPath, getFinalExtension(next), "output");
+  return next;
+};
+
+const applyRecipePatch = (current: BuilderState, patch: Partial<BuilderState>): BuilderState => {
+  let next = current;
+
+  if (patch.videoFormat) {
+    next = syncVideoFormatState(next, patch.videoFormat);
+  }
+
+  if (patch.audioFormat) {
+    next = syncAudioFormatState(next, patch.audioFormat);
+  }
+
+  next = { ...next, ...patch };
+
+  if (patch.outputPath) {
+    next.outputPath = patch.outputPath;
+  }
+
+  return next;
 };
 
 const buildTrimArgs = (state: BuilderState) => {
@@ -354,6 +541,121 @@ const appendExtraFlags = (args: string[], extraFlags: string) => {
 
   args.push(extraFlags.trim());
 };
+
+const buildWarnings = (state: BuilderState) => {
+  const warnings: string[] = [];
+
+  if (state.workflow === "gif" && !state.gifPalette) {
+    warnings.push("One-pass GIF mode is faster, but usually produces larger files and rougher gradients.");
+  }
+
+  if (state.workflow === "extract-audio" && state.audioOnlyCodec === "copy") {
+    warnings.push("Stream copy only works when the source audio codec is valid for the selected output container.");
+  }
+
+  if (state.workflow === "image-sequence" && !/%\d*d/.test(state.sequencePattern)) {
+    warnings.push("FFmpeg sequence inputs usually need a numbered pattern such as `frame-%04d.png`.");
+  }
+
+  if (state.batchMode && state.batchReplaceOriginal) {
+    warnings.push("Replace original after success will overwrite source filenames after each successful run.");
+  }
+
+  return warnings;
+};
+
+const buildDetailSections = (state: BuilderState): DetailSection[] => {
+  const input: string[] = [];
+  const processing: string[] = [];
+  const output: string[] = [];
+  const batch: string[] = [];
+
+  if (state.workflow === "image-sequence") {
+    input.push(`Input pattern: ${buildSequenceFallback(state)}.`);
+    input.push(`Input rate: ${state.sequenceFramerate || "24"} fps.`);
+  } else {
+    input.push(`Input file: ${state.inputPath || "input media"}.`);
+    if (state.startTime.trim()) {
+      input.push(`Start at ${state.startTime.trim()}.`);
+    }
+    if (state.duration.trim()) {
+      input.push(`Process ${state.duration.trim()} of media.`);
+    }
+  }
+
+  if (state.workflow === "transcode") {
+    processing.push(`Video codec: ${state.videoCodec}.`);
+    processing.push(`CRF ${state.crf || "23"} with ${state.preset || "medium"} preset.`);
+    if (state.width.trim()) {
+      processing.push(`Resize to ${state.width.trim()}px wide.`);
+    }
+    if (state.fps.trim()) {
+      processing.push(`Force ${state.fps.trim()} fps.`);
+    }
+    output.push(`Container: ${state.videoFormat.toUpperCase()}.`);
+    output.push(state.removeAudio ? "Audio removed." : `Audio codec: ${state.audioCodec} at ${state.audioBitrate || "192k"}.`);
+    if (state.faststart && state.videoFormat === "mp4") {
+      output.push("Faststart enabled.");
+    }
+  }
+
+  if (state.workflow === "gif") {
+    processing.push(`GIF rate: ${state.fps || "12"} fps.`);
+    if (state.width.trim()) {
+      processing.push(`GIF width: ${state.width.trim()}px.`);
+    }
+    processing.push(state.gifPalette ? "Palette generation enabled." : "One-pass GIF conversion.");
+    output.push(state.loopGif ? "GIF loops forever." : "GIF does not force looping.");
+  }
+
+  if (state.workflow === "extract-audio") {
+    processing.push("Video streams removed with `-vn`.");
+    output.push(`Audio format: ${state.audioFormat.toUpperCase()}.`);
+    output.push(state.audioOnlyCodec === "copy" ? "Audio stream copied without re-encoding." : `Audio codec: ${state.audioOnlyCodec}.`);
+    if (state.audioOnlyCodec !== "flac" && state.audioOnlyCodec !== "copy") {
+      output.push(`Audio bitrate: ${state.audioBitrate || "192k"}.`);
+    }
+  }
+
+  if (state.workflow === "image-sequence") {
+    processing.push(`Video codec: ${state.videoCodec}.`);
+    processing.push(`CRF ${state.crf || "18"} with ${state.preset || "slow"} preset.`);
+    if (state.width.trim()) {
+      processing.push(`Resize to ${state.width.trim()}px wide.`);
+    }
+    output.push(`Container: ${state.videoFormat.toUpperCase()}.`);
+    if (state.pixelFormat.trim()) {
+      output.push(`Pixel format: ${state.pixelFormat.trim()}.`);
+    }
+    if (state.faststart && state.videoFormat === "mp4") {
+      output.push("Faststart enabled.");
+    }
+  }
+
+  output.push(`Output path: ${state.outputPath || `output.${getFinalExtension(state)}`}.`);
+
+  if (state.batchMode && state.workflow !== "image-sequence") {
+    batch.push(`Shell: ${state.batchShell === "powershell" ? "PowerShell" : "Bash/Zsh"}.`);
+    batch.push(`Folder: ${state.batchDirectory || "."}.`);
+    batch.push(`Input pattern: ${state.batchPattern || "*.*"}.`);
+    batch.push(state.batchRecursive ? "Includes subfolders." : "Current folder only.");
+    batch.push(
+      state.batchReplaceOriginal
+        ? `Replaces originals via temporary .${getFinalExtension(state)} files after successful conversion.`
+        : `Creates new files with suffix ${state.batchNameSuffix || "-out"} and extension .${getFinalExtension(state)}.`
+    );
+  }
+
+  return [
+    { title: "Input", items: input },
+    { title: "Processing", items: processing },
+    { title: "Output", items: output },
+    { title: "Batch", items: batch },
+  ].filter((section) => section.items.length > 0);
+};
+
+const formatWrappedCommand = (command: string, preserveLineBreaks: boolean) =>
+  preserveLineBreaks ? command : command.replace(/ (-[^ ]+)/g, " \\\n  $1");
 
 function buildFfmpegArgs(state: BuilderState, inputRef: string, outputRef: string) {
   const args: string[] = ["ffmpeg"];
@@ -385,10 +687,15 @@ function buildFfmpegArgs(state: BuilderState, inputRef: string, outputRef: strin
       args.push("-vf", quote(filters.join(",")));
     }
 
-    args.push("-c:v", state.videoCodec, "-crf", state.crf || "23", "-preset", state.preset || "medium");
-    notes.push(`Encodes video with ${state.videoCodec} using CRF ${state.crf || "23"} and the ${state.preset || "medium"} preset.`);
+    args.push("-c:v", state.videoCodec, "-crf", state.crf || "23");
+    if (state.videoCodec !== "libvpx-vp9") {
+      args.push("-preset", state.preset || "medium");
+      notes.push(`Encodes video with ${state.videoCodec} using CRF ${state.crf || "23"} and the ${state.preset || "medium"} preset.`);
+    } else {
+      notes.push(`Encodes video with ${state.videoCodec} using CRF ${state.crf || "23"}.`);
+    }
 
-    if (state.removeAudio || state.audioCodec === "none") {
+    if (state.removeAudio) {
       args.push("-an");
       notes.push("Removes audio from the output.");
     } else {
@@ -412,7 +719,19 @@ function buildFfmpegArgs(state: BuilderState, inputRef: string, outputRef: strin
       notes.push(`Scales the GIF to ${state.width.trim()}px wide with Lanczos scaling.`);
     }
 
-    args.push("-vf", quote(gifFilters.join(",")), "-an");
+    if (state.gifPalette) {
+      args.push(
+        "-filter_complex",
+        quote(`[0:v]${gifFilters.join(",")},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse[gif]`),
+        "-map",
+        quote("[gif]"),
+        "-an"
+      );
+      notes.push("Generates and applies a palette for better GIF quality and smaller files.");
+    } else {
+      args.push("-vf", quote(gifFilters.join(",")), "-an");
+      notes.push("Uses a one-pass GIF conversion without a generated palette.");
+    }
     if (state.loopGif) {
       args.push("-loop", "0");
       notes.push("Configures the GIF to loop forever.");
@@ -426,7 +745,9 @@ function buildFfmpegArgs(state: BuilderState, inputRef: string, outputRef: strin
     notes.push("Drops all video streams and keeps audio only.");
 
     args.push("-c:a", state.audioOnlyCodec);
-    if (state.audioOnlyCodec !== "flac") {
+    if (state.audioOnlyCodec === "copy") {
+      notes.push("Copies the source audio stream without re-encoding. This requires a compatible output container.");
+    } else if (state.audioOnlyCodec !== "flac") {
       args.push("-b:a", state.audioBitrate || "192k");
       notes.push(`Encodes audio as ${state.audioOnlyCodec} at ${state.audioBitrate || "192k"}.`);
     } else {
@@ -446,7 +767,10 @@ function buildFfmpegArgs(state: BuilderState, inputRef: string, outputRef: strin
       args.push("-vf", quote(filters.join(",")));
     }
 
-    args.push("-c:v", state.videoCodec, "-crf", state.crf || "18", "-preset", state.preset || "slow");
+    args.push("-c:v", state.videoCodec, "-crf", state.crf || "18");
+    if (state.videoCodec !== "libvpx-vp9") {
+      args.push("-preset", state.preset || "slow");
+    }
 
     if (state.pixelFormat.trim()) {
       args.push("-pix_fmt", state.pixelFormat.trim());
@@ -489,7 +813,6 @@ const buildPowerShellBatchScript = (state: BuilderState) => {
 
   if (state.batchReplaceOriginal) {
     lines.push(`    $finalPath = Join-Path $file.DirectoryName ($file.BaseName + "." + ${quote(extension)})`);
-    lines.push("    if (Test-Path $file.FullName) { Remove-Item $file.FullName -Force }");
     lines.push("    Move-Item -Force $tempPath $finalPath");
   }
 
@@ -523,8 +846,7 @@ const buildBashBatchScript = (state: BuilderState) => {
   lines.push("  if [ $? -eq 0 ]; then");
   if (state.batchReplaceOriginal) {
     lines.push(`    final_path=\"$dir/$stem.${extension}\"`);
-    lines.push("    rm -f \"$file\"");
-    lines.push("    mv \"$temp_path\" \"$final_path\"");
+    lines.push("    mv -f \"$temp_path\" \"$final_path\"");
   }
   lines.push("  fi");
   lines.push("done");
@@ -534,7 +856,8 @@ const buildBashBatchScript = (state: BuilderState) => {
 
 export function FfmpegBuilderTool() {
   const [state, setState] = useState<BuilderState>(PRESET_STATE.transcode);
-  const [copied, setCopied] = useState(false);
+  const [copiedKind, setCopiedKind] = useState<"output" | "flags" | null>(null);
+  const [outputView, setOutputView] = useState<"compact" | "wrapped">("wrapped");
 
   const commandData = useMemo(() => {
     const single = buildFfmpegArgs(
@@ -542,41 +865,46 @@ export function FfmpegBuilderTool() {
       quote(state.workflow === "image-sequence" ? state.sequencePattern || state.inputPath : state.inputPath),
       quote(state.outputPath)
     );
-    const notes = [...single.notes];
+    const warnings = buildWarnings(state);
+    const sections = buildDetailSections(state);
 
     if (state.batchMode && state.workflow !== "image-sequence") {
-      notes.push(`Builds a ${state.batchShell === "powershell" ? "PowerShell" : "Bash"} batch script for files matching ${state.batchPattern || "*.*"} in ${state.batchDirectory || "."}.`);
-      if (state.batchRecursive) {
-        notes.push("Searches subfolders recursively.");
-      }
-      if (state.batchReplaceOriginal) {
-      notes.push(`Writes to a temporary .${getFinalExtension(state)} file and replaces the original only after a successful conversion.`);
-    } else {
-      notes.push(`Writes new files using the suffix ${state.batchNameSuffix || "-out"} and the .${getFinalExtension(state)} extension.`);
-      }
+      const batchArgs = buildFfmpegArgs(
+        state,
+        state.batchShell === "powershell" ? quote("$($file.FullName)") : "\"$file\"",
+        state.batchShell === "powershell" ? quote("$outputPath") : "\"$output_path\""
+      ).args;
+      const command = state.batchShell === "powershell" ? buildPowerShellBatchScript(state) : buildBashBatchScript(state);
 
       return {
-        command: state.batchShell === "powershell" ? buildPowerShellBatchScript(state) : buildBashBatchScript(state),
-        notes,
+        commandCompact: command,
+        commandWrapped: command,
+        flags: batchArgs.slice(1).join(" "),
+        sections,
+        warnings,
         heading: `Generated ${state.batchShell === "powershell" ? "PowerShell" : "Bash"} Script`,
       };
     }
 
+    const compact = single.args.join(" ");
     return {
-      command: single.args.join(" "),
-      notes,
+      commandCompact: compact,
+      commandWrapped: formatWrappedCommand(compact, false),
+      flags: single.args.slice(1).join(" "),
+      sections,
+      warnings,
       heading: "Generated Command",
     };
   }, [state]);
 
-  const copyCommand = async () => {
-    await navigator.clipboard.writeText(commandData.command);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+  const copyText = async (value: string, kind: "output" | "flags") => {
+    await navigator.clipboard.writeText(value);
+    setCopiedKind(kind);
+    window.setTimeout(() => setCopiedKind(null), 1500);
   };
 
   const setWorkflow = (workflow: Workflow) => {
-    setState(PRESET_STATE[workflow]);
+    setState((current) => applyWorkflowPreset(current, workflow));
   };
 
   const update = <K extends keyof BuilderState>(key: K, value: BuilderState[K]) => {
@@ -593,6 +921,18 @@ export function FfmpegBuilderTool() {
 
   const setAudioFormat = (value: AudioOutputFormat) => {
     setState((current) => syncAudioFormatState(current, value));
+  };
+
+  const loadRecipe = (recipeValue: string) => {
+    const recipe = RECIPES[state.workflow].find((option) => option.value === recipeValue);
+    if (!recipe) {
+      return;
+    }
+    setState((current) => applyRecipePatch(current, recipe.patch));
+  };
+
+  const resetWorkflowDefaults = () => {
+    setState((current) => applyWorkflowPreset(current, current.workflow));
   };
 
   const supportsBatch = state.workflow !== "image-sequence";
@@ -620,6 +960,26 @@ export function FfmpegBuilderTool() {
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
+                  <Label>Recipe</Label>
+                  <Select onValueChange={loadRecipe}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Load a common recipe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RECIPES[state.workflow].map((recipe) => (
+                        <SelectItem key={recipe.value} value={recipe.value}>
+                          {recipe.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end justify-start md:justify-end">
+                  <Button variant="outline" onClick={resetWorkflowDefaults}>
+                    Reset Workflow Defaults
+                  </Button>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="inputPath">Input</Label>
                   <Input
                     id="inputPath"
@@ -631,6 +991,9 @@ export function FfmpegBuilderTool() {
                     }
                     placeholder={state.workflow === "image-sequence" ? "frame-%04d.png" : "input.mp4"}
                   />
+                  {state.workflow === "image-sequence" && (
+                    <p className="text-xs text-muted-foreground">Use a numbered pattern such as `frame-%04d.png`.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="outputPath">Output</Label>
@@ -756,25 +1119,32 @@ export function FfmpegBuilderTool() {
                       <Label htmlFor="crf">CRF</Label>
                       <Input id="crf" value={state.crf} onChange={(event) => update("crf", event.target.value)} placeholder="23" />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Preset</Label>
-                      <Select value={state.preset} onValueChange={(value) => update("preset", value)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ultrafast">ultrafast</SelectItem>
-                          <SelectItem value="veryfast">veryfast</SelectItem>
-                          <SelectItem value="medium">medium</SelectItem>
-                          <SelectItem value="slow">slow</SelectItem>
-                          <SelectItem value="veryslow">veryslow</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {state.videoCodec !== "libvpx-vp9" ? (
+                      <div className="space-y-2">
+                        <Label>Preset</Label>
+                        <Select value={state.preset} onValueChange={(value) => update("preset", value)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ultrafast">ultrafast</SelectItem>
+                            <SelectItem value="veryfast">veryfast</SelectItem>
+                            <SelectItem value="medium">medium</SelectItem>
+                            <SelectItem value="slow">slow</SelectItem>
+                            <SelectItem value="veryslow">veryslow</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Preset</Label>
+                        <Input value="Not used for VP9 in this builder" readOnly />
+                      </div>
+                    )}
                   </>
                 )}
 
-                {state.workflow === "transcode" && (
+                {state.workflow === "transcode" && !state.removeAudio && (
                   <>
                     <div className="space-y-2">
                       <Label>Audio Codec</Label>
@@ -791,17 +1161,15 @@ export function FfmpegBuilderTool() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {state.audioCodec !== "none" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="audioBitrate">Audio Bitrate</Label>
-                        <Input
-                          id="audioBitrate"
-                          value={state.audioBitrate}
-                          onChange={(event) => update("audioBitrate", event.target.value)}
-                          placeholder="192k"
-                        />
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="audioBitrate">Audio Bitrate</Label>
+                      <Input
+                        id="audioBitrate"
+                        value={state.audioBitrate}
+                        onChange={(event) => update("audioBitrate", event.target.value)}
+                        placeholder="192k"
+                      />
+                    </div>
                   </>
                 )}
 
@@ -809,16 +1177,27 @@ export function FfmpegBuilderTool() {
                   <>
                     <div className="space-y-2">
                       <Label>Audio Codec</Label>
-                      <Input value={currentAudioFormat.codec} readOnly />
+                      <Select value={state.audioOnlyCodec} onValueChange={(value) => update("audioOnlyCodec", value as AudioOnlyCodec)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AUDIO_ONLY_CODEC_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    {state.audioFormat !== "flac" && (
+                    {state.audioOnlyCodec !== "flac" && state.audioOnlyCodec !== "copy" && (
                       <div className="space-y-2">
                       <Label htmlFor="audioOnlyBitrate">Audio Bitrate</Label>
                       <Input
                         id="audioOnlyBitrate"
                         value={state.audioBitrate}
                         onChange={(event) => update("audioBitrate", event.target.value)}
-                        placeholder={currentAudioFormat.bitrateLabel}
+                        placeholder={currentAudioFormat.bitrateLabel || "192k"}
                       />
                       </div>
                     )}
@@ -878,14 +1257,24 @@ export function FfmpegBuilderTool() {
                     </label>
                   )}
                   {state.workflow === "gif" && (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={state.loopGif}
-                        onChange={(event) => update("loopGif", event.target.checked)}
-                      />
-                      Loop GIF forever
-                    </label>
+                    <>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={state.gifPalette}
+                          onChange={(event) => update("gifPalette", event.target.checked)}
+                        />
+                        Generate palette
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={state.loopGif}
+                          onChange={(event) => update("loopGif", event.target.checked)}
+                        />
+                        Loop GIF forever
+                      </label>
+                    </>
                   )}
                 </div>
               </CardContent>
@@ -898,13 +1287,13 @@ export function FfmpegBuilderTool() {
         <Card>
           <CardHeader>
             <CardTitle>Batch Output</CardTitle>
-            <CardDescription>Generate a PowerShell loop for whole folders, including optional recursive processing and safe replacement of originals.</CardDescription>
+            <CardDescription>Generate a reusable PowerShell or Bash script for whole folders, including optional recursive processing and replace-in-place output.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-wrap gap-4 text-sm md:col-span-2">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchMode} onChange={(event) => update("batchMode", event.target.checked)} />
-                Generate batch script
+                Generate folder script
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchRecursive} onChange={(event) => update("batchRecursive", event.target.checked)} disabled={!state.batchMode} />
@@ -912,7 +1301,7 @@ export function FfmpegBuilderTool() {
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={state.batchReplaceOriginal} onChange={(event) => update("batchReplaceOriginal", event.target.checked)} disabled={!state.batchMode} />
-                Replace originals after success
+                Replace original after success
               </label>
             </div>
             <div className="space-y-2">
@@ -920,8 +1309,11 @@ export function FfmpegBuilderTool() {
               <Input id="batchDirectory" value={state.batchDirectory} onChange={(event) => update("batchDirectory", event.target.value)} disabled={!state.batchMode} placeholder="D:\\media" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="batchPattern">Search Pattern</Label>
+              <Label htmlFor="batchPattern">Input Pattern</Label>
               <Input id="batchPattern" value={state.batchPattern} onChange={(event) => update("batchPattern", event.target.value)} disabled={!state.batchMode} placeholder="*.mp4" />
+              <p className="text-xs text-muted-foreground">
+                Use wildcards such as `*.mp4` or `clip-*.mov`. PowerShell uses `Get-ChildItem -Filter`; Bash uses `find -name`.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Shell</Label>
@@ -935,9 +1327,10 @@ export function FfmpegBuilderTool() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Batch Output Format</Label>
-              <Input value={getFinalExtension(state).toUpperCase()} readOnly disabled={!state.batchMode} />
+            <div className="space-y-2 md:col-span-2">
+              <p className="text-sm text-muted-foreground">
+                Batch output uses the same format as the generated command: `.{getFinalExtension(state)}`.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="batchNameSuffix">New File Suffix</Label>
@@ -963,11 +1356,36 @@ export function FfmpegBuilderTool() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea readOnly value={commandData.command} className="min-h-36 font-mono text-sm" />
-            <Button onClick={copyCommand}>
-              {copied ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
-              {copied ? "Copied" : "Copy Command"}
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <div className="w-full max-w-40 space-y-2">
+                <Label>View</Label>
+                <Select value={outputView} onValueChange={(value) => setOutputView(value as "compact" | "wrapped")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="wrapped">Wrapped</SelectItem>
+                    <SelectItem value="compact">Compact</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Textarea
+              readOnly
+              wrap="soft"
+              value={outputView === "wrapped" ? commandData.commandWrapped : commandData.commandCompact}
+              className="min-h-36 font-mono text-sm whitespace-pre-wrap break-all"
+            />
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => copyText(outputView === "wrapped" ? commandData.commandWrapped : commandData.commandCompact, "output")}>
+                {copiedKind === "output" ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
+                {copiedKind === "output" ? "Copied Output" : "Copy Output"}
+              </Button>
+              <Button variant="outline" onClick={() => copyText(commandData.flags, "flags")}>
+                {copiedKind === "flags" ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
+                {copiedKind === "flags" ? "Copied Flags" : "Copy Flags"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -975,13 +1393,23 @@ export function FfmpegBuilderTool() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Info className="size-5" />
-              What This Does
+              Command Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            {commandData.notes.length > 0 ? (
-              commandData.notes.map((note) => (
-                <p key={note}>{note}</p>
+            {commandData.warnings.map((warning) => (
+              <p key={warning} className="text-amber-700 dark:text-amber-300">
+                Warning: {warning}
+              </p>
+            ))}
+            {commandData.sections.length > 0 ? (
+              commandData.sections.map((section) => (
+                <div key={section.title} className="space-y-1">
+                  <p className="font-medium text-foreground">{section.title}</p>
+                  {section.items.map((item) => (
+                    <p key={item}>{item}</p>
+                  ))}
+                </div>
               ))
             ) : (
               <p>Fill in a few options and the builder will describe the generated command here.</p>
