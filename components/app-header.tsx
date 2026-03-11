@@ -6,7 +6,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { getToolById, getCategoryByToolId } from "@/lib/tools";
 import { Badge } from "@/components/ui/badge";
-import { ThemeControls } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
 import { useFavorites } from "@/components/favorites-provider";
 
@@ -72,8 +71,6 @@ export function AppHeader() {
           <h1 className="text-lg font-semibold">pickletools</h1>
         </div>
       )}
-
-      <ThemeControls />
     </header>
   );
 }

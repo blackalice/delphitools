@@ -29,6 +29,90 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ThemeModeToggle, ThemePaletteControl } from "@/components/theme-switch";
+
+function AboutDialogBody() {
+  return (
+    <DialogContent className="max-w-lg">
+      <DialogHeader>
+        <DialogTitle>About delphitools/pickletools</DialogTitle>
+      </DialogHeader>
+
+      <div className="grid gap-4 sm:grid-cols-2 text-sm pt-4 border-t">
+        <div className="space-y-1">
+          <h3 className="font-medium text-foreground">Made by</h3>
+          <p className="text-muted-foreground">
+            <a
+              href="https://rmv.fyi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              delphi
+            </a>
+            &nbsp;& forked by&nbsp;
+            <a
+              href="https://rtfoy.co.uk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              foy
+            </a>
+          </p>
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-medium text-foreground">Source</h3>
+          <p className="text-muted-foreground">
+            <a
+              href="https://github.com/blackalice/delphitools"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              blackalice/delphitools
+            </a>
+          </p>
+        </div>
+      </div>
+      <div className="pt-4 border-t space-y-2">
+        <h3 className="font-medium text-foreground text-sm">Built with</h3>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { name: "Next.js", url: "https://nextjs.org" },
+            { name: "React", url: "https://react.dev" },
+            { name: "Tailwind CSS", url: "https://tailwindcss.com" },
+            { name: "shadcn/ui", url: "https://ui.shadcn.com" },
+            { name: "Radix UI", url: "https://radix-ui.com" },
+            { name: "Lucide", url: "https://lucide.dev" },
+          ].map((lib) => (
+            <a
+              key={lib.name}
+              href={lib.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {lib.name}
+            </a>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground/60 pt-2">
+          Plus{" "}
+          <a
+            href="https://github.com/1612elphi/delphitools/blob/main/ACKNOWLEDGEMENTS.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-muted-foreground transition-colors"
+          >
+            many more open source libraries
+          </a>
+          .
+        </p>
+      </div>
+    </DialogContent>
+  );
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -220,96 +304,29 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        <div className="group-data-[collapsible=icon]:hidden">
+          <div className="space-y-2">
+            <ThemePaletteControl />
+            <div className="flex gap-2">
+              <ThemeModeToggle className="w-1/2 min-w-0" />
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="w-1/2 min-w-0 rounded-xl border border-border/70 bg-card/80 px-3 text-xs text-muted-foreground text-left hover:bg-sidebar-accent shadow-sm backdrop-blur transition-colors">
+                    About
+                  </button>
+                </DialogTrigger>
+                <AboutDialogBody />
+              </Dialog>
+            </div>
+          </div>
+        </div>
         <Dialog>
-          <DialogTrigger asChild>
-            <button className="w-full p-2 text-xs text-muted-foreground text-left hover:bg-sidebar-accent rounded-md transition-colors group-data-[collapsible=icon]:hidden">
-              <p>No logins. No tracking.</p>
-              <p className="mt-1 opacity-70">Long live the handmade web.</p>
-            </button>
-          </DialogTrigger>
           <DialogTrigger asChild>
             <button className="hidden group-data-[collapsible=icon]:flex w-full p-2 items-center justify-center hover:bg-sidebar-accent rounded-md transition-colors">
               <Info className="size-4 text-muted-foreground" />
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>About delphitools/pickletools</DialogTitle>
-            </DialogHeader>
-
-            <div className="grid gap-4 sm:grid-cols-2 text-sm pt-4 border-t">
-              <div className="space-y-1">
-                <h3 className="font-medium text-foreground">Made by</h3>
-                <p className="text-muted-foreground">
-                  <a
-                    href="https://rmv.fyi"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-primary transition-colors"
-                  >
-                    delphi
-                  </a>
-&nbsp;& forked by&nbsp; 
-                        <a
-                    href="https://rtfoy.co.uk"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-primary transition-colors"
-                  >
-                    foy
-                  </a>
-                </p>
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-medium text-foreground">Source</h3>
-                <p className="text-muted-foreground">
-                  <a
-                    href="https://github.com/blackalice/delphitools"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-primary transition-colors"
-                  >
-                    blackalice/delphitools
-                  </a>
-                </p>
-              </div>
-            </div>
-            <div className="pt-4 border-t space-y-2">
-              <h3 className="font-medium text-foreground text-sm">Built with</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { name: "Next.js", url: "https://nextjs.org" },
-                  { name: "React", url: "https://react.dev" },
-                  { name: "Tailwind CSS", url: "https://tailwindcss.com" },
-                  { name: "shadcn/ui", url: "https://ui.shadcn.com" },
-                  { name: "Radix UI", url: "https://radix-ui.com" },
-                  { name: "Lucide", url: "https://lucide.dev" },
-                ].map((lib) => (
-                  <a
-                    key={lib.name}
-                    href={lib.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {lib.name}
-                  </a>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground/60 pt-2">
-                Plus{" "}
-                <a
-                  href="https://github.com/1612elphi/delphitools/blob/main/ACKNOWLEDGEMENTS.md"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-muted-foreground transition-colors"
-                >
-                  many more open source libraries
-                </a>
-                .
-              </p>
-            </div>
-          </DialogContent>
+          <AboutDialogBody />
         </Dialog>
       </SidebarFooter>
 

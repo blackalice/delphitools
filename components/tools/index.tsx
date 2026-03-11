@@ -18,6 +18,7 @@ import { PdfPreflightTool } from "./pdf-preflight";
 import { GifOptimiserTool } from "./gif-optimiser";
 import { FontConverterTool } from "./font-converter";
 import { DiffCheckerTool } from "./diff-checker";
+import { ImageComparerTool } from "./image-comparer";
 import { TextScratchpadTool } from "./text-scratchpad";
 import { FfmpegBuilderTool } from "./ffmpeg-builder";
 import { ImagemagickBuilderTool } from "./imagemagick-builder";
@@ -40,6 +41,7 @@ export const toolComponents: Record<string, React.ComponentType> = {
   "gif-optimiser": GifOptimiserTool,
   "font-converter": FontConverterTool,
   "diff-checker": DiffCheckerTool,
+  "image-comparer": ImageComparerTool,
   "text-scratchpad": TextScratchpadTool,
   "ffmpeg-builder": FfmpegBuilderTool,
   "imagemagick-builder": ImagemagickBuilderTool,

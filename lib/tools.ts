@@ -205,6 +205,14 @@ export const toolCategories: ToolCategory[] = [
         href: "/tools/image-converter",
       },
       {
+        id: "image-comparer",
+        name: "Image Comparer",
+        description: "Compare two images with side by side, overlay, difference, and swipe views",
+        icon: GalleryVertical,
+        href: "/tools/image-comparer",
+        new: true,
+      },
+      {
         id: "artwork-enhancer",
         name: "Artwork Enhancer",
         description: "Add colour noise overlay to artwork",
